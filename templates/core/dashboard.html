@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CareCircle Dashboard Demo</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sage: #4A7C6F;
+    --sage-light: #E8F2EF;
+    --sage-mid: #A8CBB8;
+    --warm: #C67D5A;
+    --warm-light: #F7EDE5;
+    --navy: #1E3A4F;
+    --slate: #4A5568;
+    --muted: #8A96A3;
+    --surface: #FAFAF8;
+    --card: #FFFFFF;
+    --border: rgba(74,124,111,0.15);
+    --text: #1E2D3A;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--text); }
+
+  .app { display: flex; flex-direction: column; min-height: 100vh; max-width: 1100px; margin: 0 auto; padding: 0 0 40px; }
+
+  /* NAV */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px; background: var(--navy);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 10px; transition: opacity 0.2s; }
+  .nav-brand:hover { opacity: 0.8; }
+  .nav-logo { width: 28px; height: 28px; }
+  .nav-brand span { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .tab {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 400;
+    color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.2s; border: none; background: none;
+  }
+  .tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  .tab.active { color: var(--navy); background: #fff; font-weight: 500; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .role-badge { background: var(--sage); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .nav-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+  /* PAGE */
+  .page { display: none; padding: 32px 28px; }
+  .page.active { display: block; }
+
+  /* DASHBOARD */
+  .welcome-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; }
+  .welcome-sub { font-size: 13px; color: var(--muted); font-weight: 400; margin-bottom: 4px; }
+  .welcome-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; color: var(--navy); line-height: 1.2; }
+  .welcome-title span { color: var(--sage); font-style: italic; }
+  .date-chip { background: var(--sage-light); color: var(--sage); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: var(--card); border-radius: 16px; padding: 20px 22px;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+  .stat-card.clickable { cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+  .stat-card.clickable:hover { transform: translateY(-2px); border-color: var(--sage); }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.tasks::before { background: var(--sage); }
+  .stat-card.logs::before { background: #7EB5D6; }
+  .stat-card.alerts::before { background: var(--warm); }
+  .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .stat-num { font-size: 38px; font-weight: 300; line-height: 1; margin-bottom: 4px; }
+  .stat-card.tasks .stat-num { color: var(--sage); }
+  .stat-card.logs .stat-num { color: #7EB5D6; }
+  .stat-card.alerts .stat-num { color: var(--warm); }
+  .stat-hint { font-size: 12px; color: var(--muted); }
+
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 16px; }
+
+  .circle-card {
+    background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+    padding: 22px 24px; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .circle-card:hover { border-color: var(--sage); }
+  .circle-info { display: flex; align-items: center; gap: 16px; }
+  .circle-avatar {
+    width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--sage-light), var(--sage-mid));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--sage);
+  }
+  .circle-name { font-size: 16px; font-weight: 500; color: var(--navy); margin-bottom: 3px; }
+  .circle-sub { font-size: 13px; color: var(--muted); }
+  .circle-members { display: flex; }
+  .member-pip {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--card);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: #fff; margin-left: -8px;
+  }
+  .member-pip:first-child { margin-left: 0; }
+  .btn-enter {
+    background: var(--navy); color: #fff; border: none; border-radius: 10px;
+    padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: background 0.2s;
+  }
+  .btn-enter:hover { background: var(--sage); }
+
+  /* TASKS */
+  .tasks-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 600; color: var(--navy); }
+  .btn-new {
+    background: var(--sage); color: #fff; border: none; border-radius: 10px;
+    padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px;
+  }
+
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .kanban-col { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
+  .kanban-head {
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .kanban-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+  .col-open .kanban-title { color: var(--sage); }
+  .col-claimed .kanban-title { color: #7EB5D6; }
+  .col-verified .kanban-title { color: var(--warm); }
+  .kanban-count { width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .col-open .kanban-count { background: var(--sage-light); color: var(--sage); }
+  .col-claimed .kanban-count { background: #E8F4FB; color: #7EB5D6; }
+  .col-verified .kanban-count { background: var(--warm-light); color: var(--warm); }
+  .kanban-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
+
+  .task-item {
+    background: var(--card); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+  }
+  .task-item:hover { border-color: var(--sage); transform: translateY(-1px); }
+  .task-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .task-title { font-size: 14px; font-weight: 500; color: var(--navy); line-height: 1.3; flex: 1; }
+  .task-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 6px; margin-left: 8px; }
+  .type-medical { background: #FEF2F2; color: #DC6B6B; }
+  .type-logistics { background: var(--sage-light); color: var(--sage); }
+  .type-emotional { background: #F5F0FF; color: #8B6BD6; }
+  .task-meta { display: flex; align-items: center; gap: 8px; }
+  .task-due { font-size: 12px; color: var(--muted); }
+  .urgency-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .urgency-high { background: var(--warm); }
+  .urgency-med { background: #F5C842; }
+  .urgency-low { background: var(--sage); }
+  .claim-btn {
+    background: none; border: 1px solid var(--sage); color: var(--sage);
+    border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 10px; transition: all 0.15s;
+  }
+  .claim-btn:hover { background: var(--sage); color: #fff; }
+  .claimer { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .claimer-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--sage-mid); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: var(--sage); }
+  .claimer-name { font-size: 12px; color: var(--muted); }
+  .task-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .task-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+  .task-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px 8px; }
+  .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 1200; }
+  .modal-overlay.open { display: flex; }
+  .modal-card { width: min(560px, 92vw); background: var(--card); border-radius: 18px; padding: 24px; box-shadow: 0 24px 80px rgba(0,0,0,0.18); }
+  .modal-title { font-family: 'Lora', serif; font-size: 22px; color: var(--navy); margin-bottom: 18px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .form-input, .form-select, .form-textarea { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; font-size: 14px; font-family: 'DM Sans', sans-serif; }
+  .form-textarea { min-height: 110px; resize: vertical; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* FEED */
+  .feed-container { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  .feed-main { }
+  .feed-aside { }
+
+  .feed-input-card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); padding: 18px; margin-bottom: 20px; }
+  .feed-input-row { display: flex; gap: 12px; align-items: flex-start; }
+  .feed-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .feed-textarea {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--text); background: var(--surface); resize: none; min-height: 56px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .feed-textarea:focus { border-color: var(--sage); }
+  .feed-actions { display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px; }
+  .btn-post { background: var(--navy); color: #fff; border: none; border-radius: 9px; padding: 8px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+  .feed-item {
+    background: var(--card); border-radius: 14px; border: 1px solid var(--border);
+    padding: 16px 18px; margin-bottom: 12px;
+  }
+  .feed-item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .feed-item-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .feed-item-time { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .feed-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; }
+  .tag-ai { background: #F0EBF8; color: #8B6BD6; }
+  .tag-log { background: var(--sage-light); color: var(--sage); }
+  .tag-alert { background: var(--warm-light); color: var(--warm); }
+  .feed-text { font-size: 14px; color: var(--slate); line-height: 1.6; }
+  .feed-signals { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .signal-pill { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+  .sig-warn { background: #FEF3E2; color: #C67D5A; }
+  .sig-ok { background: var(--sage-light); color: var(--sage); }
+  .sig-watch { background: #EBF4FF; color: #5B9BD6; }
+
+  .aside-card { background: var(--card); border-radius: 14px; border: 1px solid var(--border); padding: 16px; margin-bottom: 16px; }
+  .aside-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
+  .member-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .member-row:last-child { border-bottom: none; }
+  .member-av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .member-deet { flex: 1; }
+  .member-name { font-size: 13px; font-weight: 500; color: var(--navy); }
+  .member-role { font-size: 11px; color: var(--muted); }
+  .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); }
+
+  /* VOICE LOGS */
+  .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .record-card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); padding: 28px; }
+  .record-inner { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px 0; }
+  .mic-wrap { position: relative; }
+  .mic-ring {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--sage-light); border: 2px solid var(--sage-mid);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .mic-ring:hover { background: var(--sage); }
+  .mic-ring:hover svg { color: #fff; }
+  .mic-ring.recording { background: var(--warm); border-color: var(--warm); animation: pulse 1.4s ease-in-out infinite; }
+  .mic-ring.recording svg { color: #fff; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(198,125,90,0.35); } 50% { box-shadow: 0 0 0 16px rgba(198,125,90,0); } }
+  .mic-label { font-size: 14px; color: var(--muted); }
+  .rec-status { font-size: 13px; color: var(--warm); font-weight: 500; }
+
+  .insights-list { display: flex; flex-direction: column; gap: 10px; }
+  .insight-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border-radius: 10px; padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .insight-name { font-size: 14px; font-weight: 500; color: var(--navy); }
+  .insight-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .conf-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .conf-bar { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 3px; }
+  .fill-warn { background: var(--warm); }
+  .fill-ok { background: var(--sage); }
+  .fill-watch { background: #7EB5D6; }
+  .conf-pct { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  .coming-soon { background: linear-gradient(135deg, var(--sage-light), rgba(126,181,214,0.2)); border-radius: 14px; padding: 18px 20px; border: 1px solid var(--border); }
+  .cs-title { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .cs-item { font-size: 13px; color: var(--sage); padding: 4px 0; display: flex; align-items: center; gap: 7px; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+</style>
+
+</head>
+<body>
+
+<div class="app">
+  <nav class="nav">
+    <a href="/dashboard/" class="nav-brand" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+      <svg class="nav-logo" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+        <circle cx="14" cy="14" r="6" fill="rgba(168,203,184,0.7)"/>
+        <circle cx="14" cy="5" r="2.5" fill="#A8CBB8"/>
+        <circle cx="22.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <circle cx="5.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <line x1="14" y1="8" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="20.7" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="7.3" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+      </svg>
+      <span>CareCircle</span>
+    </a>
+    <div class="nav-tabs">
+      <button class="tab active" onclick="showPage('dashboard', this)">Dashboard</button>
+      <button class="tab" onclick="showPage('tasks', this)">Tasks</button>
+      <button class="tab" onclick="showPage('feed', this)">Feed</button>
+      <button class="tab" onclick="showPage('voice', this)">Voice Logs</button>
+      <button class="tab" onclick="showPage('insights', this)">Insights</button>
+    </div>
+    <div class="nav-right">
+      <a href="/notifications/" class="nav-icon" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1a5 5 0 0 1 5 5v2.5l1.5 2H1.5l1.5-2V6a5 5 0 0 1 5-5z" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/><path d="M6 13.5a2 2 0 0 0 4 0" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/></svg>
+      </a>
+        <a href="/profile/" class="nav-icon" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </a>
+      <div class="role-badge" id="dashboard-role-badge">{{ user_role }}</div>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="welcome-row">
+      <div>
+        <div class="welcome-sub" id="dashboard-date">Today</div>
+        <div class="welcome-title">Welcome back, <span id="dashboard-viewer-name">Caregiver.</span></div>
+      </div>
+      <div class="date-chip" id="dashboard-circle-chip">Loading circle…</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card tasks clickable" onclick="window.location.href='/tasks/'">
+        <div class="stat-label">Active Tasks</div>
+        <div class="stat-num" id="stat-active-tasks">0</div>
+        <div class="stat-hint" id="stat-active-tasks-hint">Task board arrives in Phase B</div>
+      </div>
+      <div class="stat-card logs clickable" onclick="window.location.href='/logs/'">
+        <div class="stat-label">New Logs</div>
+        <div class="stat-num" id="stat-new-logs">0</div>
+        <div class="stat-hint" id="stat-new-logs-hint">Voice logs arrive in Phase E</div>
+      </div>
+      <div class="stat-card alerts clickable" onclick="window.location.href='/alerts/'">
+        <div class="stat-label">Health Alerts</div>
+        <div class="stat-num" id="stat-alerts">0</div>
+        <div class="stat-hint" id="stat-alerts-hint">No active alerts</div>
+      </div>
+    </div>
+
+    {% if user_role == 'admin' %}
+    <div id="admin-circle-panel">
+      <div class="section-label">Care Circle</div>
+      <div class="circle-card">
+        <div class="circle-info">
+          <div class="circle-avatar" id="circle-avatar">C</div>
+          <div>
+            <div class="circle-name" id="circle-name">Checking circle status…</div>
+            <div class="circle-sub" id="circle-sub">We’ll show your circle once it’s set up.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div class="circle-members" id="circle-members"></div>
+          <button class="btn-enter" id="view-circle-button" onclick="goToCircleMembers()">View Circle →</button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:28px;">
+      <div class="section-label">Recent Activity</div>
+      <div id="recent-activity" style="background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;">
+        <div style="padding:18px;color:var(--muted);font-size:13px;">Loading recent activity…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="page" id="page-tasks">
+    <div class="tasks-header">
+      <div>
+        <div class="welcome-sub" id="tasks-subtitle">Care circle tasks</div>
+        <div class="page-title">Task Board</div>
+      </div>
+      <button class="btn-new" id="new-task-button" onclick="openTaskModal()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        New Task
+      </button>
+    </div>
+
+    <div class="kanban">
+      <div class="kanban-col col-open">
+        <div class="kanban-head">
+          <div class="kanban-title">Open</div>
+          <div class="kanban-count" id="count-open">0</div>
+        </div>
+        <div class="kanban-body" id="tasks-open"></div>
+      </div>
+
+      <div class="kanban-col col-claimed">
+        <div class="kanban-head">
+          <div class="kanban-title">Claimed</div>
+          <div class="kanban-count" id="count-claimed">0</div>
+        </div>
+        <div class="kanban-body" id="tasks-claimed"></div>
+      </div>
+
+      <div class="kanban-col col-verified">
+        <div class="kanban-head">
+          <div class="kanban-title">Verified</div>
+          <div class="kanban-count" id="count-verified">0</div>
+        </div>
+        <div class="kanban-body" id="tasks-verified"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal-card">
+      <div class="modal-title" id="task-modal-title">New Task</div>
+      <form id="task-form">
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input class="form-input" id="task-title-input" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="task-description-input"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-select" id="task-type-input">
+              <option value="medical">Medical</option>
+              <option value="logistics">Logistics</option>
+              <option value="emotional">Emotional</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Urgency</label>
+            <select class="form-select" id="task-urgency-input">
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Due At</label>
+            <input type="datetime-local" class="form-input" id="task-due-input" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="claim-btn" onclick="closeTaskModal()">Cancel</button>
+          <button type="submit" class="btn-new" style="padding:10px 18px;">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FEED -->
+  <div class="page" id="page-feed">
+    <div class="tasks-header">
+      <div>
+        <div class="welcome-sub">Margaret's Care Circle</div>
+        <div class="page-title">Care Feed</div>
+      </div>
+    </div>
+
+    <div class="feed-container">
+      <div class="feed-main">
+        <div class="feed-input-card">
+          <div class="feed-input-row">
+            <div class="feed-avatar" id="feed-author-avatar">S</div>
+            <textarea class="feed-textarea" id="feed-new-text" placeholder="Add a note, observation, or update…" rows="2"></textarea>
+          </div>
+          <div class="feed-actions">
+            <button class="btn-post" id="feed-post-button" onclick="postFeedEntry()">Post update</button>
+          </div>
+        </div>
+        <div id="feed-list">
+          <div class="feed-item">
+            <div class="feed-text">Loading feed…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feed-aside">
+        <div class="aside-card">
+          <div class="aside-title">This week</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Tasks completed</span><span id="feed-weekly-tasks" style="font-weight:600;color:var(--navy)">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Voice logs</span><span id="feed-weekly-voice" style="font-weight:600;color:var(--navy)">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;"><span style="color:var(--muted)">Active alerts</span><span id="feed-weekly-alerts" style="font-weight:600;color:var(--warm)">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE LOGS -->
+  <div class="page" id="page-voice">
+    <div class="tasks-header">
+      <div>
+        <div class="welcome-sub">Margaret's Care Circle</div>
+        <div class="page-title">Voice Log Analysis</div>
+      </div>
+    </div>
+
+    <div class="voice-grid">
+      <div>
+        <div class="record-card" style="margin-bottom:20px;">
+          <div class="section-label">Record New Log</div>
+          <div class="record-inner">
+            <!-- Mic permission status -->
+            <div id="mic-permission-banner" style="display:none;width:100%;max-width:400px;padding:9px 13px;border-radius:8px;font-size:12px;font-weight:500;"></div>
+
+            <div class="mic-wrap">
+              <div class="mic-ring" id="micBtn" onclick="toggleRecording()">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" id="micIcon">
+                  <rect x="9" y="2" width="6" height="12" rx="3" stroke="#4A7C6F" stroke-width="1.6"/>
+                  <path d="M5 10a7 7 0 0 0 14 0" stroke="#4A7C6F" stroke-width="1.6" stroke-linecap="round"/>
+                  <line x1="12" y1="17" x2="12" y2="21" stroke="#4A7C6F" stroke-width="1.6" stroke-linecap="round"/>
+                  <line x1="9" y1="21" x2="15" y2="21" stroke="#4A7C6F" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="mic-label" id="micLabel">Tap to record a voice note</div>
+            <div class="rec-status" id="recStatus" style="display:none;">Recording… 0:00</div>
+
+            <!-- Shown after recording stops -->
+            <div id="voice-recorded-indicator" style="display:none;font-size:12px;color:var(--sage);font-weight:500;">&#10003; Recording captured — ready to submit</div>
+
+            <!-- File upload (alternative to microphone) -->
+            <input type="file" id="voice-file-input" accept="audio/*" style="display:none;" onchange="handleAudioFileSelected()"/>
+            <button class="btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="document.getElementById('voice-file-input').click()">Upload audio file</button>
+            <div id="voice-file-name" style="font-size:11px;color:var(--muted);margin-top:-8px;"></div>
+
+            <input class="form-input" id="voice-audio-label" placeholder="Label this note (optional)" style="max-width:360px;" />
+
+            <!-- Submit row — hidden until audio is ready -->
+            <div id="voice-submit-row" style="display:none;gap:10px;flex-wrap:wrap;justify-content:center;">
+              <button class="btn-new" id="voice-submit-btn" style="padding:8px 18px;" onclick="submitVoiceLog()">Transcribe &#8594;</button>
+              <button class="btn-secondary" style="padding:8px 12px;" onclick="clearVoiceForm()">Clear</button>
+            </div>
+            <div id="voice-upload-status" style="font-size:12px;margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <div class="record-card" style="margin-bottom:16px;">
+          <div class="section-label">Pipeline Status</div>
+          <div id="voice-pipeline-status" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Queued</span><span style="font-weight:600;color:var(--navy);" id="voice-queued-count">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Processing</span><span style="font-weight:600;color:#5B9BD6;" id="voice-processing-count">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Completed</span><span style="font-weight:600;color:var(--sage);" id="voice-completed-count">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;"><span style="color:var(--muted)">Failed (retryable)</span><span style="font-weight:600;color:var(--warm);" id="voice-failed-count">0</span></div>
+          </div>
+        </div>
+
+        <div class="coming-soon">
+          <div class="cs-title">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 2v5l3 2" stroke="#4A7C6F" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Voice pipeline notes
+          </div>
+          <div class="cs-item">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#4A7C6F" stroke-width="1.2"/><path d="M4 6l1.5 1.5L8 4" stroke="#4A7C6F" stroke-width="1.2" stroke-linecap="round"/></svg>
+            New uploads enter queued status
+          </div>
+          <div class="cs-item">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#4A7C6F" stroke-width="1.2"/><path d="M4 6l1.5 1.5L8 4" stroke="#4A7C6F" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Processing status updates automatically
+          </div>
+          <div class="cs-item">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#4A7C6F" stroke-width="1.2"/><path d="M4 6l1.5 1.5L8 4" stroke="#4A7C6F" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Failed jobs expose one-click retry
+          </div>
+          <div class="cs-item">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="none" stroke="#4A7C6F" stroke-width="1.2"/><path d="M4 6l1.5 1.5L8 4" stroke="#4A7C6F" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Signals appear when transcription completes
+          </div>
+        </div>
+      </div>
+
+      <div>
+
+        <div class="record-card">
+          <div class="section-label">Recent Transcriptions</div>
+          <div id="voice-log-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+            <div style="background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);font-size:13px;color:var(--muted);">Loading transcriptions…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="page" id="page-insights">
+    <div class="tasks-header">
+      <div>
+        <div class="welcome-sub">Margaret's Care Circle</div>
+        <div class="page-title">Insights</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div id="insights-trend-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+        <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:14px;">
+          <div style="font-size:12px;color:var(--muted);">Loading trend cards…</div>
+        </div>
+      </div>
+
+      <div class="record-card" style="padding:14px;">
+        <div class="section-label">Characteristic trends (14 days)</div>
+        <div id="insights-trend-bars" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+          <div style="font-size:13px;color:var(--muted);">Loading trend bars…</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start;">
+        <div class="record-card" style="padding:14px;">
+          <div class="section-label">Confidence</div>
+          <div id="insights-confidence-label" style="font-size:12px;color:var(--muted);margin-top:8px;">Loading confidence…</div>
+          <div style="margin-top:8px;height:10px;border-radius:999px;background:var(--bg);overflow:hidden;">
+            <div id="insights-confidence-fill" style="height:100%;width:0%;background:var(--sage);"></div>
+          </div>
+          <div id="insights-confidence-reason" style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4;"></div>
+          <div id="insights-updated-at" style="font-size:11px;color:var(--muted);margin-top:10px;"></div>
+        </div>
+
+        <div class="record-card" style="padding:14px;">
+          <div class="section-label">Watch-level highlights</div>
+          <div id="insights-watch-list" class="insights-list" style="margin-top:8px;">
+            <div style="font-size:13px;color:var(--muted);">Loading highlights…</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--muted);padding:0 2px;">Insights are assistive and non-diagnostic. Use them to guide observation and care-team coordination.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let activeCircleId = null;
+const initialPage = '{{ initial_page|default:"dashboard" }}';
+let tasksLoaded = false;
+let tasksCanManage = false;
+let editingTaskId = null;
+let taskBoardItems = [];
+let feedLoaded = false;
+let voiceLoaded = false;
+let insightsLoaded = false;
+let voicePollTimer = null;
+let voiceBlob = null;
+let voiceMediaRecorder = null;
+let voiceAudioChunks = [];
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'tasks') loadTasksData();
+  if (id === 'feed') loadFeedData();
+  if (id === 'voice') loadVoiceData();
+  if (id === 'insights') loadInsightsData();
+}
+
+function goToCircleMembers() {
+  if (!activeCircleId) return;
+  window.location.href = `/circles/${activeCircleId}/members/`;
+}
+
+function openInitialPage() {
+  const queryTab = new URLSearchParams(window.location.search).get('tab');
+  const tabMap = {
+    dashboard: 0,
+    tasks: 1,
+    feed: 2,
+    voice: 3,
+    insights: 4,
+  };
+  const requestedPage = tabMap[queryTab] !== undefined ? queryTab : initialPage;
+  const tabs = document.querySelectorAll('.tab');
+  const tabIndex = tabMap[requestedPage] ?? 0;
+  showPage(requestedPage, tabs[tabIndex]);
+}
+
+function formatDashboardDate() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function timeAgo(value) {
+  const date = new Date(value);
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+function timeUntil(value) {
+  const date = new Date(value);
+  const diffMs = date.getTime() - Date.now();
+  if (diffMs <= 0) return 'now';
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
+}
+
+function renderMemberPips(memberPips) {
+  const colors = ['#4A7C6F', '#7EB5D6', '#8B6BD6', '#C67D5A'];
+  const container = document.getElementById('circle-members');
+  if (!container) return;
+  container.innerHTML = '';
+
+  memberPips.forEach((pip, index) => {
+    const el = document.createElement('div');
+    el.className = 'member-pip';
+    el.style.background = colors[index % colors.length];
+    el.textContent = pip.label;
+    container.appendChild(el);
+  });
+}
+
+function renderRecentActivity(items) {
+  const container = document.getElementById('recent-activity');
+  if (!items.length) {
+    container.innerHTML = `
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+        <div style="color:var(--muted);font-size:13px;">No recent activity to show yet.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/tasks/" style="text-decoration:none;background:var(--sage-light);color:var(--sage);padding:7px 12px;border-radius:8px;font-size:12px;font-weight:500;">Create first task</a>
+          <a href="/alerts/" style="text-decoration:none;background:var(--warm-light);color:var(--warm);padding:7px 12px;border-radius:8px;font-size:12px;font-weight:500;">Review alerts</a>
+          <button type="button" onclick="showPage('feed', document.querySelectorAll('.tab')[2]);" style="border:none;cursor:pointer;background:#EEF4FA;color:#5B9BD6;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:500;">Post first update</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const colors = {
+    warm: 'var(--warm)',
+    blue: '#7EB5D6',
+    sage: 'var(--sage)'
+  };
+
+  container.innerHTML = items.map((item, index) => {
+    const border = index < items.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+    const tagMarkup = item.target_url
+      ? `<button type="button" class="feed-tag tag-ai" onclick="window.location.href='${item.target_url}'" style="border:none;cursor:pointer;">${item.tag}</button>`
+      : `<div class="feed-tag tag-ai">${item.tag}</div>`;
+    return `
+      <div style="padding:14px 18px;${border}display:flex;gap:12px;align-items:center;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${colors[item.color] || 'var(--sage)'};flex-shrink:0;"></div>
+        <div style="font-size:13px;color:var(--slate);flex:1;">${item.text}</div>
+        <div style="font-size:12px;color:var(--muted);">${timeAgo(item.timestamp)}</div>
+        ${tagMarkup}
+      </div>
+    `;
+  }).join('');
+}
+
+function applyCircleEmptyState(messageTitle, messageSub, chipText) {
+  activeCircleId = null;
+  document.getElementById('dashboard-circle-chip').textContent = chipText;
+
+  const circleAvatar = document.getElementById('circle-avatar');
+  const circleName = document.getElementById('circle-name');
+  const circleSub = document.getElementById('circle-sub');
+  const circleMembers = document.getElementById('circle-members');
+
+  if (circleAvatar) circleAvatar.textContent = 'C';
+  if (circleName) circleName.textContent = messageTitle;
+  if (circleSub) circleSub.textContent = messageSub;
+  if (circleMembers) circleMembers.innerHTML = '';
+
+  const viewCircleButton = document.getElementById('view-circle-button');
+  if (viewCircleButton) {
+    viewCircleButton.disabled = true;
+    viewCircleButton.textContent = 'No Circle Yet';
+    viewCircleButton.style.opacity = '0.6';
+    viewCircleButton.style.cursor = 'not-allowed';
+  }
+
+  renderRecentActivity([]);
+}
+
+function formatDueLabel(value, status) {
+  if (!value) return status === 'verified' ? 'Completed' : 'No due date';
+  const date = new Date(value);
+  const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  if (status === 'verified') return `Completed · ${label}`;
+  return `Due ${label}`;
+}
+
+function getUrgencyClass(urgency) {
+  return urgency === 'high' ? 'urgency-high' : urgency === 'medium' ? 'urgency-med' : 'urgency-low';
+}
+
+function taskCardMarkup(task) {
+  const actions = [];
+  if (task.can_claim) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'claim')">Claim task</button>`);
+  if (task.can_release) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'release')">Release</button>`);
+  if (task.can_verify) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'verify')">Verify</button>`);
+  if (task.can_edit) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();openTaskModal(${task.id})">Edit</button>`);
+  if (task.can_delete) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();deleteTask(${task.id})">Delete</button>`);
+
+  return `
+    <div class="task-item" ${task.status === 'verified' ? 'style="opacity:0.75;"' : ''}>
+      <div class="task-top">
+        <div class="task-title">${task.title}</div>
+        <div class="task-type type-${task.task_type}">${task.task_type}</div>
+      </div>
+      <div class="task-meta">
+        <div class="urgency-dot ${getUrgencyClass(task.urgency)}"></div>
+        <div class="task-due">${formatDueLabel(task.due_at, task.status)}</div>
+      </div>
+      ${task.description ? `<div class="task-note">${task.description}</div>` : ''}
+      ${task.status === 'claimed' ? `<div class="claimer"><div class="claimer-dot">${(task.claimed_by_name || '?').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()}</div><div class="claimer-name">Claimed by ${task.claimed_by_name || 'Caregiver'} · expires in ${timeUntil(task.claimed_expires_at)}</div></div>` : ''}
+      ${task.status === 'verified' && task.verified_by_name ? `<div class="task-note">Verified by ${task.verified_by_name}</div>` : ''}
+      ${actions.length ? `<div class="task-actions">${actions.join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderTaskColumn(elementId, tasks) {
+  const el = document.getElementById(elementId);
+  if (!tasks.length) {
+    el.innerHTML = '<div class="task-empty">Nothing here yet.</div>';
+    return;
+  }
+  el.innerHTML = tasks.map(taskCardMarkup).join('');
+}
+
+function renderTasksBoard(payload) {
+  const tasks = payload.tasks || [];
+  taskBoardItems = tasks;
+  tasksCanManage = !!payload.can_manage;
+  document.getElementById('new-task-button').style.display = tasksCanManage ? 'flex' : 'none';
+
+  const openTasks = tasks.filter(task => task.status === 'open');
+  const claimedTasks = tasks.filter(task => task.status === 'claimed');
+  const verifiedTasks = tasks.filter(task => task.status === 'verified');
+
+  document.getElementById('count-open').textContent = openTasks.length;
+  document.getElementById('count-claimed').textContent = claimedTasks.length;
+  document.getElementById('count-verified').textContent = verifiedTasks.length;
+  document.getElementById('tasks-subtitle').textContent = activeCircleId ? 'Live coordination for your care circle' : 'Care circle tasks';
+
+  renderTaskColumn('tasks-open', openTasks);
+  renderTaskColumn('tasks-claimed', claimedTasks);
+  renderTaskColumn('tasks-verified', verifiedTasks);
+}
+
+function feedTagClass(source) {
+  if (source === 'ai') return 'tag-ai';
+  if (source === 'alert') return 'tag-alert';
+  return 'tag-log';
+}
+
+function feedTagLabel(entry) {
+  if (entry.source === 'ai') return 'AI';
+  if (entry.source === 'alert') return 'watch';
+  if (entry.source === 'task') return 'task';
+  return entry.entry_type === 'human' ? 'log' : 'system';
+}
+
+function renderFeedEntries(entries) {
+  const container = document.getElementById('feed-list');
+  if (!entries.length) {
+    container.innerHTML = '<div class="feed-item"><div class="feed-text">No feed entries yet.</div></div>';
+    return;
+  }
+
+  container.innerHTML = entries.map(entry => {
+    const avatarColor = entry.source === 'ai' ? '#8B6BD6' : entry.source === 'alert' ? '#C67D5A' : '#7EB5D6';
+    const title = entry.title || entry.created_by_name || 'CareCircle Update';
+    const tags = Array.isArray(entry.tags) ? entry.tags : [];
+    const signals = tags.length
+      ? `<div class="feed-signals">${tags.map(tag => `<div class="signal-pill sig-watch">${tag}</div>`).join('')}</div>`
+      : '';
+
+    return `
+      <div class="feed-item">
+        <div class="feed-item-head">
+          <div class="feed-avatar" style="width:30px;height:30px;font-size:11px;background:${avatarColor};flex-shrink:0;">${entry.created_by_initial || 'CC'}</div>
+          <div>
+            <div class="feed-item-name">${title}</div>
+          </div>
+          <div class="feed-tag ${feedTagClass(entry.source)}">${feedTagLabel(entry)}</div>
+          <div class="feed-item-time">${timeAgo(entry.created_at)}</div>
+        </div>
+        <div class="feed-text">${entry.content}</div>
+        ${signals}
+      </div>
+    `;
+  }).join('');
+}
+
+function isWithinLast7Days(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  return date.getTime() >= sevenDaysAgo;
+}
+
+async function updateFeedWeeklySummary() {
+  const setSummary = (tasks = 0, voice = 0, alerts = 0) => {
+    document.getElementById('feed-weekly-tasks').textContent = String(tasks);
+    document.getElementById('feed-weekly-voice').textContent = String(voice);
+    document.getElementById('feed-weekly-alerts').textContent = String(alerts);
+  };
+
+  try {
+    const [tasksResponse, voiceResponse, alertsResponse] = await Promise.all([
+      fetch('/api/tasks/'),
+      fetch('/api/voice-logs/'),
+      fetch('/api/alerts/'),
+    ]);
+
+    if (!tasksResponse.ok || !voiceResponse.ok || !alertsResponse.ok) {
+      setSummary(0, 0, 0);
+      return;
+    }
+
+    const [tasksPayload, voicePayload, alertsPayload] = await Promise.all([
+      tasksResponse.json(),
+      voiceResponse.json(),
+      alertsResponse.json(),
+    ]);
+
+    const tasks = Array.isArray(tasksPayload.tasks) ? tasksPayload.tasks : [];
+    const voiceLogs = Array.isArray(voicePayload.logs) ? voicePayload.logs : [];
+    const alerts = Array.isArray(alertsPayload) ? alertsPayload : [];
+
+    const weeklyCompletedTasks = tasks.filter(task =>
+      task.status === 'verified' && isWithinLast7Days(task.verified_at || task.updated_at)
+    ).length;
+    const weeklyVoiceLogs = voiceLogs.filter(log => isWithinLast7Days(log.created_at)).length;
+    const activeAlerts = alerts.filter(alert => alert.status === 'active').length;
+
+    setSummary(weeklyCompletedTasks, weeklyVoiceLogs, activeAlerts);
+  } catch {
+    setSummary(0, 0, 0);
+  }
+}
+
+async function loadFeedData() {
+  if (feedLoaded) return;
+  try {
+    const response = await fetch('/api/feed/');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderFeedEntries(data.entries || []);
+    const canPost = !!data.can_post;
+    document.getElementById('feed-new-text').disabled = !canPost;
+    document.getElementById('feed-post-button').style.display = canPost ? 'inline-block' : 'none';
+    await updateFeedWeeklySummary();
+    feedLoaded = true;
+  } catch (error) {
+    document.getElementById('feed-list').innerHTML = '<div class="feed-item"><div class="feed-text">Failed to load feed.</div></div>';
+    document.getElementById('feed-weekly-tasks').textContent = '0';
+    document.getElementById('feed-weekly-voice').textContent = '0';
+    document.getElementById('feed-weekly-alerts').textContent = '0';
+  }
+}
+
+async function postFeedEntry() {
+  const textArea = document.getElementById('feed-new-text');
+  const value = textArea.value.trim();
+  if (!value) return;
+
+  const response = await fetch('/api/feed/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: '', content: value, tags: [] }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    alert(data.detail || 'Unable to post update.');
+    return;
+  }
+
+  textArea.value = '';
+  feedLoaded = false;
+  await loadFeedData();
+}
+
+function insightDirectionMeta(direction) {
+  if (direction === 'up') return { symbol: '↑', color: 'var(--warm)' };
+  if (direction === 'down') return { symbol: '↓', color: 'var(--navy)' };
+  return { symbol: '→', color: 'var(--sage)' };
+}
+
+function renderInsightsTrendCards(cards) {
+  const container = document.getElementById('insights-trend-cards');
+  if (!cards.length) {
+    container.innerHTML = '<div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:14px;font-size:13px;color:var(--muted);">No trend cards yet. Add voice logs and feed updates to generate insights.</div>';
+    return;
+  }
+
+  container.innerHTML = cards.map(card => {
+    const trend = insightDirectionMeta(card.direction);
+    return `
+      <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="font-size:12px;color:var(--muted);">${card.title}</div>
+          <div style="font-size:12px;font-weight:700;color:${trend.color};">${trend.symbol}</div>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:var(--navy);line-height:1.4;">${card.value}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.4;">${card.note}</div>
+        <div style="font-size:11px;color:var(--muted);">Confidence ${card.confidence || 0}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderInsightsWatchHighlights(items) {
+  const container = document.getElementById('insights-watch-list');
+  if (!items.length) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No watch-level highlights right now.</div>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const isWatch = item.level === 'watch';
+    const badgeBg = isWatch ? 'var(--warm-light)' : 'var(--sage-light)';
+    const badgeFg = isWatch ? 'var(--warm)' : 'var(--sage)';
+    const badgeLabel = isWatch ? 'watch' : 'stable';
+    return `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${item.title}</div>
+          <div style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:${badgeBg};color:${badgeFg};">${badgeLabel}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:5px;line-height:1.45;">${item.detail}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderInsightsTrendBars(items) {
+  const container = document.getElementById('insights-trend-bars');
+  if (!items.length) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No characteristic trend data yet. Add voice logs to populate 14-day bars.</div>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const history = Array.isArray(item.history) ? item.history.slice(-14) : [];
+    const maxValue = Math.max(1, ...history.map(point => Number(point.value || 0)));
+    const bars = history.map(point => {
+      const height = Math.max(6, Math.round((Number(point.value || 0) / maxValue) * 34));
+      return `<div title="${point.date}: ${point.value}" style="width:8px;height:${height}px;border-radius:4px;background:var(--sage-mid);"></div>`;
+    }).join('');
+
+    const directionSymbol = item.direction === 'up' ? '↑' : item.direction === 'down' ? '↓' : '→';
+    const directionColor = item.direction === 'up' ? 'var(--warm)' : item.direction === 'down' ? 'var(--sage)' : 'var(--muted)';
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="min-width:190px;">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${item.label}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Current ${item.current_average}/day · Baseline ${item.baseline_average}/day</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:3px;height:34px;">${bars}</div>
+        <div style="font-size:14px;font-weight:700;color:${directionColor};width:22px;text-align:right;">${directionSymbol}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderInsightsConfidence(confidence, updatedAt) {
+  const score = Math.max(0, Math.min(100, confidence?.score || 0));
+  document.getElementById('insights-confidence-label').textContent = `${confidence?.label || 'Low confidence'} · ${score}%`;
+  document.getElementById('insights-confidence-fill').style.width = `${score}%`;
+  document.getElementById('insights-confidence-reason').textContent = confidence?.reason || 'Confidence increases as more voice, feed, and alert data is available.';
+  document.getElementById('insights-updated-at').textContent = updatedAt ? `Updated ${timeAgo(updatedAt)}` : '';
+}
+
+async function loadInsightsData(force = false) {
+  if (insightsLoaded && !force) return;
+  try {
+    const response = await fetch('/api/insights/');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderInsightsTrendCards(data.trend_cards || []);
+    renderInsightsTrendBars(data.characteristic_trends || []);
+    renderInsightsWatchHighlights(data.watch_highlights || []);
+    renderInsightsConfidence(data.confidence || {}, data.updated_at);
+    insightsLoaded = true;
+  } catch {
+    document.getElementById('insights-trend-cards').innerHTML = '<div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:14px;font-size:13px;color:var(--warm);">Failed to load insights.</div>';
+    document.getElementById('insights-trend-bars').innerHTML = '<div style="font-size:13px;color:var(--warm);">Trend bars unavailable right now.</div>';
+    document.getElementById('insights-watch-list').innerHTML = '<div style="font-size:13px;color:var(--warm);">Highlights unavailable right now.</div>';
+    document.getElementById('insights-confidence-label').textContent = 'Unavailable';
+    document.getElementById('insights-confidence-fill').style.width = '0%';
+    document.getElementById('insights-confidence-reason').textContent = 'Please retry in a moment.';
+    document.getElementById('insights-updated-at').textContent = '';
+  }
+}
+
+async function loadTasksData() {
+  if (!activeCircleId && tasksLoaded) return;
+  try {
+    const response = await fetch('/api/tasks/');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderTasksBoard(data);
+    tasksLoaded = true;
+  } catch (error) {
+    document.getElementById('tasks-open').innerHTML = '<div class="task-empty">Failed to load tasks.</div>';
+    document.getElementById('tasks-claimed').innerHTML = '<div class="task-empty">Failed to load tasks.</div>';
+    document.getElementById('tasks-verified').innerHTML = '<div class="task-empty">Failed to load tasks.</div>';
+  }
+}
+
+function openTaskModal(taskId = null) {
+  editingTaskId = taskId;
+  const modal = document.getElementById('task-modal');
+  const title = document.getElementById('task-modal-title');
+  if (taskId === null) {
+    title.textContent = 'New Task';
+    document.getElementById('task-form').reset();
+  } else {
+    title.textContent = 'Edit Task';
+    const currentTask = taskBoardItems.find(task => task.id === taskId);
+    if (!currentTask) return;
+    document.getElementById('task-title-input').value = currentTask.title;
+    document.getElementById('task-description-input').value = currentTask.description || '';
+    document.getElementById('task-type-input').value = currentTask.task_type;
+    document.getElementById('task-urgency-input').value = currentTask.urgency;
+    document.getElementById('task-due-input').value = currentTask.due_at ? new Date(currentTask.due_at).toISOString().slice(0, 16) : '';
+  }
+  modal.classList.add('open');
+}
+
+function closeTaskModal() {
+  editingTaskId = null;
+  document.getElementById('task-modal').classList.remove('open');
+}
+
+async function saveTask(event) {
+  event.preventDefault();
+  const payload = {
+    title: document.getElementById('task-title-input').value,
+    description: document.getElementById('task-description-input').value,
+    task_type: document.getElementById('task-type-input').value,
+    urgency: document.getElementById('task-urgency-input').value,
+    due_at: document.getElementById('task-due-input').value ? new Date(document.getElementById('task-due-input').value).toISOString() : null,
+  };
+  const url = editingTaskId ? `/api/tasks/${editingTaskId}/` : '/api/tasks/';
+  const method = editingTaskId ? 'PATCH' : 'POST';
+
+  const response = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json();
+    alert(data.detail || 'Unable to save task.');
+    return;
+  }
+  closeTaskModal();
+  tasksLoaded = false;
+  loadTasksData();
+  loadDashboardData();
+}
+
+async function taskAction(taskId, action) {
+  const response = await fetch(`/api/tasks/${taskId}/${action}/`, { method: 'POST' });
+  if (!response.ok) {
+    const data = await response.json();
+    alert(data.detail || 'Unable to update task.');
+    return;
+  }
+  tasksLoaded = false;
+  loadTasksData();
+  loadDashboardData();
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task?')) return;
+  const response = await fetch(`/api/tasks/${taskId}/`, { method: 'DELETE' });
+  if (!response.ok) {
+    const data = await response.json();
+    alert(data.detail || 'Unable to delete task.');
+    return;
+  }
+  tasksLoaded = false;
+  loadTasksData();
+  loadDashboardData();
+}
+
+async function loadDashboardData() {
+  document.getElementById('dashboard-date').textContent = formatDashboardDate();
+
+  try {
+    const response = await fetch('/api/dashboard/');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    const circle = data.circle;
+    const isAdmin = (data.user_role || 'member') === 'admin';
+    const adminCirclePanel = document.getElementById('admin-circle-panel');
+
+    document.getElementById('dashboard-viewer-name').textContent = `${data.viewer_name || 'Caregiver'}.`;
+    document.getElementById('dashboard-role-badge').textContent = data.user_role || 'member';
+    if (adminCirclePanel) adminCirclePanel.style.display = isAdmin ? 'block' : 'none';
+
+    document.getElementById('stat-active-tasks').textContent = data.stats.active_tasks.count;
+    document.getElementById('stat-active-tasks-hint').textContent = data.stats.active_tasks.hint;
+    document.getElementById('stat-new-logs').textContent = data.stats.new_logs.count;
+    document.getElementById('stat-new-logs-hint').textContent = data.stats.new_logs.hint;
+    document.getElementById('stat-alerts').textContent = data.stats.alerts.count;
+    document.getElementById('stat-alerts-hint').textContent = data.stats.alerts.hint;
+
+    if (!circle) {
+      applyCircleEmptyState(
+        'No care circle yet',
+        'Create or join a circle to start coordinating care.',
+        'Circle setup needed'
+      );
+      return;
+    }
+
+    activeCircleId = circle.id;
+    const viewCircleButton = document.getElementById('view-circle-button');
+    if (viewCircleButton) {
+      viewCircleButton.disabled = false;
+      viewCircleButton.textContent = 'View Circle →';
+      viewCircleButton.style.opacity = '1';
+      viewCircleButton.style.cursor = 'pointer';
+    }
+
+    document.getElementById('dashboard-circle-chip').textContent = `${circle.care_recipient} · Active`;
+    const circleAvatar = document.getElementById('circle-avatar');
+    const circleName = document.getElementById('circle-name');
+    const circleSub = document.getElementById('circle-sub');
+    if (circleAvatar) circleAvatar.textContent = (circle.care_recipient || circle.name || 'C').charAt(0).toUpperCase();
+    if (circleName) circleName.textContent = circle.name;
+    if (circleSub) circleSub.textContent = `Care Recipient: ${circle.care_recipient} · ${circle.member_count} members`;
+    renderMemberPips(circle.member_pips || []);
+    renderRecentActivity(data.recent_activity || []);
+    if (initialPage === 'tasks' || document.getElementById('page-tasks').classList.contains('active')) {
+      tasksLoaded = false;
+      loadTasksData();
+    }
+  } catch (error) {
+    applyCircleEmptyState(
+      'Circle unavailable right now',
+      'We could not load circle details. Please refresh in a moment.',
+      'Circle unavailable'
+    );
+    document.getElementById('recent-activity').innerHTML = '<div style="padding:18px;color:var(--warm);font-size:13px;">Failed to load dashboard data.</div>';
+  }
+}
+
+// ── Voice log functions ──────────────────────────────────────────────────────
+
+function startVoicePolling() {
+  if (voicePollTimer) return;
+  voicePollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch('/api/voice-logs/');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      renderVoiceLogs(data.logs || []);
+      updateVoicePipeline(data.pipeline || {});
+      if ((data.pipeline.queued || 0) + (data.pipeline.processing || 0) === 0) stopVoicePolling();
+    } catch {}
+  }, 3000);
+}
+
+function stopVoicePolling() {
+  if (voicePollTimer) { clearInterval(voicePollTimer); voicePollTimer = null; }
+}
+
+async function loadVoiceData(force) {
+  if (voiceLoaded && !force) return;
+  try {
+    const resp = await fetch('/api/voice-logs/');
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    renderVoiceLogs(data.logs || []);
+    updateVoicePipeline(data.pipeline || {});
+    voiceLoaded = true;
+    const pending = (data.pipeline.queued || 0) + (data.pipeline.processing || 0);
+    if (pending > 0) startVoicePolling(); else stopVoicePolling();
+  } catch {
+    document.getElementById('voice-log-list').innerHTML =
+      '<div style="padding:10px;color:var(--warm);font-size:13px;">Failed to load logs.</div>';
+  }
+}
+
+function updateVoicePipeline(pipeline) {
+  document.getElementById('voice-queued-count').textContent = pipeline.queued ?? 0;
+  document.getElementById('voice-processing-count').textContent = pipeline.processing ?? 0;
+  document.getElementById('voice-completed-count').textContent = pipeline.completed ?? 0;
+  document.getElementById('voice-failed-count').textContent = pipeline.failed ?? 0;
+}
+
+function renderVoiceLogs(logs) {
+  const container = document.getElementById('voice-log-list');
+  if (!logs.length) {
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;padding:4px 0;">
+        <div style="color:var(--muted);font-size:13px;">No voice logs yet.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="background:var(--sage-light);color:var(--sage);padding:5px 10px;border-radius:7px;font-size:12px;">Use the mic above to record</span>
+          <span style="background:#EEF4FA;color:#5B9BD6;padding:5px 10px;border-radius:7px;font-size:12px;">Or upload an audio file</span>
+        </div>
+      </div>`;
+    return;
+  }
+  const statusColors = { completed: 'var(--sage)', queued: 'var(--navy)', processing: '#5B9BD6', failed: 'var(--warm)' };
+  const statusLabels = { completed: 'Transcribed', queued: 'Queued', processing: 'Processing…', failed: 'Failed' };
+  container.innerHTML = logs.map(log => {
+    const signals = (log.extracted_signals || []).map(s =>
+      `<div class="signal-pill sig-watch">${s}</div>`).join('');
+    const retryBtn = log.status === 'failed'
+      ? `<button class="claim-btn" style="font-size:11px;padding:4px 8px;margin-top:6px;" onclick="retryVoiceLog(${log.id})">&#8635; Retry</button>`
+      : '';
+    const transcript = log.transcript
+      ? `<div style="font-size:13px;color:var(--slate);line-height:1.5;margin-top:6px;">&ldquo;${log.transcript}&rdquo;</div>`
+      : (log.status === 'processing' ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;font-style:italic;">Transcribing audio…</div>` : '');
+    const audioChip = log.has_audio ? `<span style="font-size:10px;background:var(--sage-light);color:var(--sage);padding:2px 6px;border-radius:4px;margin-left:4px;">audio</span>` : '';
+    return `
+      <div style="background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="font-size:12px;color:var(--muted);">${timeAgo(log.created_at)}${log.created_by_name ? ' · ' + log.created_by_name : ''}${audioChip}</div>
+          <div style="font-size:11px;font-weight:600;color:${statusColors[log.status] || 'var(--muted)'}">${statusLabels[log.status] || log.status}</div>
+        </div>
+        ${log.audio_label ? `<div style="font-size:12px;font-weight:600;color:var(--navy);margin-top:2px;">${log.audio_label}</div>` : ''}
+        ${transcript}
+        ${signals ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${signals}</div>` : ''}
+        ${log.error_message ? `<div style="font-size:11px;color:var(--warm);margin-top:4px;">${log.error_message}</div>` : ''}
+        ${retryBtn}
+      </div>`;
+  }).join('');
+}
+
+async function retryVoiceLog(logId) {
+  try {
+    const resp = await fetch(`/api/voice-logs/${logId}/retry/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    if (!resp.ok) { const d = await resp.json(); alert(d.detail || 'Retry failed.'); return; }
+    voiceLoaded = false;
+    await loadVoiceData(true);
+    loadDashboardData();
+  } catch { alert('Retry request failed.'); }
+}
+
+function handleAudioFileSelected() {
+  const file = document.getElementById('voice-file-input').files[0];
+  if (!file) return;
+  document.getElementById('voice-file-name').textContent = file.name;
+  document.getElementById('voice-submit-row').style.display = 'flex';
+  voiceBlob = null;
+}
+
+function clearVoiceForm() {
+  voiceBlob = null;
+  document.getElementById('voice-audio-label').value = '';
+  document.getElementById('voice-file-input').value = '';
+  document.getElementById('voice-file-name').textContent = '';
+  document.getElementById('voice-submit-row').style.display = 'none';
+  document.getElementById('voice-recorded-indicator').style.display = 'none';
+  document.getElementById('voice-upload-status').style.display = 'none';
+}
+
+async function submitVoiceLog() {
+  const label = document.getElementById('voice-audio-label').value.trim();
+  const fileInput = document.getElementById('voice-file-input');
+  const file = fileInput.files[0];
+  const statusEl = document.getElementById('voice-upload-status');
+  const btn = document.getElementById('voice-submit-btn');
+
+  if (!voiceBlob && !file) {
+    statusEl.textContent = 'Nothing to submit. Record audio or choose a file.';
+    statusEl.style.color = 'var(--warm)';
+    statusEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  statusEl.textContent = 'Uploading and transcribing…';
+  statusEl.style.color = 'var(--muted)';
+  statusEl.style.display = 'block';
+
+  const formData = new FormData();
+  if (voiceBlob) {
+    formData.append('audio_file', voiceBlob, `recording-${Date.now()}.webm`);
+  } else {
+    formData.append('audio_file', file, file.name);
+  }
+  if (label) formData.append('audio_label', label);
+
+  try {
+    const resp = await fetch('/api/voice-logs/', { method: 'POST', body: formData });
+    if (!resp.ok) {
+      const d = await resp.json();
+      statusEl.textContent = d.detail || 'Submit failed. Try again.';
+      statusEl.style.color = 'var(--warm)';
+      btn.disabled = false; btn.textContent = 'Transcribe →';
+      return;
+    }
+    const log = await resp.json();
+    statusEl.textContent = log.status === 'completed'
+      ? '\u2713 Transcribed successfully!'
+      : '\u2713 Submitted — transcription in progress.';
+    statusEl.style.color = 'var(--sage)';
+    clearVoiceForm();
+    voiceLoaded = false;
+    await loadVoiceData(true);
+    loadDashboardData();
+    if (log.status === 'queued' || log.status === 'processing') startVoicePolling();
+  } catch {
+    statusEl.textContent = 'Network error. Please try again.';
+    statusEl.style.color = 'var(--warm)';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Transcribe →';
+}
+
+// ── Recording ────────────────────────────────────────────────────────────────
+
+let recording = false, timer = null, secs = 0;
+
+function showMicBanner(msg, type) {
+  // type: 'error' | 'warn' | 'ok'
+  const banner = document.getElementById('mic-permission-banner');
+  if (!msg) { banner.style.display = 'none'; return; }
+  const styles = {
+    error: { bg: '#FDF0E8', color: '#C67D5A', border: '#F4C5A8' },
+    warn:  { bg: '#FFFBEA', color: '#8A6D1C', border: '#F0E0A0' },
+    ok:    { bg: 'var(--sage-light)', color: 'var(--sage)', border: '#B2D4C8' },
+  };
+  const s = styles[type] || styles.warn;
+  banner.style.cssText = `display:block;width:100%;max-width:400px;padding:9px 13px;border-radius:8px;font-size:12px;font-weight:500;background:${s.bg};color:${s.color};border:1px solid ${s.border};text-align:center;`;
+  banner.textContent = msg;
+}
+
+async function checkMicPermission() {
+  if (!navigator.permissions) return 'unknown';
+  try {
+    const result = await navigator.permissions.query({ name: 'microphone' });
+    result.onchange = () => {
+      if (result.state === 'granted') showMicBanner(null);
+      if (result.state === 'denied') showMicBanner('Microphone blocked. Allow access in your browser settings to record.', 'error');
+    };
+    return result.state; // 'granted' | 'denied' | 'prompt'
+  } catch { return 'unknown'; }
+}
+
+function toggleRecording() {
+  const btn = document.getElementById('micBtn');
+  const label = document.getElementById('micLabel');
+  const recStatus = document.getElementById('recStatus');
+  const icon = document.getElementById('micIcon');
+  const indicator = document.getElementById('voice-recorded-indicator');
+
+  if (!recording) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showMicBanner('Microphone recording is not supported in this browser. Upload an audio file instead.', 'error');
+      return;
+    }
+    // Check current permission state before requesting
+    checkMicPermission().then(state => {
+      if (state === 'denied') {
+        showMicBanner('Microphone is blocked. Open browser settings and allow microphone access, then try again.', 'error');
+        return;
+      }
+      if (state === 'prompt') {
+        showMicBanner('Your browser will ask for microphone permission — please click Allow.', 'warn');
+      }
+    });
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      showMicBanner(null);
+      voiceAudioChunks = [];
+      voiceBlob = null;
+      voiceMediaRecorder = new MediaRecorder(stream);
+      voiceMediaRecorder.ondataavailable = e => { if (e.data.size > 0) voiceAudioChunks.push(e.data); };
+      voiceMediaRecorder.onstop = () => {
+        voiceBlob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
+        stream.getTracks().forEach(t => t.stop());
+        indicator.style.display = 'block';
+        document.getElementById('voice-submit-row').style.display = 'flex';
+        document.getElementById('voice-file-input').value = '';
+        document.getElementById('voice-file-name').textContent = '';
+      };
+      voiceMediaRecorder.start();
+      recording = true;
+      btn.classList.add('recording');
+      label.style.display = 'none';
+      recStatus.style.display = 'block';
+      secs = 0;
+      timer = setInterval(() => {
+        secs++;
+        const m = Math.floor(secs / 60), s = secs % 60;
+        recStatus.textContent = 'Recording… ' + m + ':' + (s < 10 ? '0' : '') + s;
+      }, 1000);
+      icon.querySelector('rect').setAttribute('stroke', 'white');
+      icon.querySelectorAll('path,line').forEach(e => e.setAttribute('stroke', 'white'));
+    }).catch(err => {
+      const isDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
+      if (isDenied) {
+        showMicBanner('Microphone access was denied. Allow it in your browser settings and try again.', 'error');
+      } else {
+        showMicBanner('Could not access microphone: ' + err.message + '. Try uploading an audio file instead.', 'error');
+      }
+    });
+      checkMicPermission().then(state => {
+        if (state === 'denied') showMicBanner('Microphone is blocked. Allow access in browser settings to record.', 'error');
+        else showMicBanner(null);
+      });
+  } else {
+    recording = false;
+    if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') voiceMediaRecorder.stop();
+    btn.classList.remove('recording');
+    label.style.display = 'block';
+    recStatus.style.display = 'none';
+    clearInterval(timer);
+    icon.querySelector('rect').setAttribute('stroke', '#4A7C6F');
+    icon.querySelectorAll('path,line').forEach(e => e.setAttribute('stroke', '#4A7C6F'));
+  }
+}
+
+openInitialPage();
+loadDashboardData();
+document.getElementById('task-form').addEventListener('submit', saveTask);
+</script>
+</body>
+</html>

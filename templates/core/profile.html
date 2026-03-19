@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Profile — CareCircle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --sage: #4A7C6F;
+  --sage-light: #E8F2EF;
+  --sage-mid: #A8CBB8;
+  --warm: #C67D5A;
+  --warm-light: #F7EDE5;
+  --navy: #1E3A4F;
+  --muted: #8A96A3;
+  --surface: #FAFAF8;
+  --card: #FFFFFF;
+  --border: rgba(74,124,111,0.15);
+  --text: #1E2D3A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--text); }
+
+.app { display: flex; flex-direction: column; min-height: 100vh; max-width: 800px; margin: 0 auto; padding: 0 0 40px; }
+
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; background: var(--navy);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; transition: opacity 0.2s; }
+.nav-brand:hover { opacity: 0.8; }
+.nav-logo { width: 28px; height: 28px; }
+.nav-brand span { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
+.nav-back { background: rgba(255,255,255,0.2); color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif; text-decoration: none; transition: background 0.2s; }
+.nav-back:hover { background: rgba(255,255,255,0.3); }
+.role-badge { background: var(--sage); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+
+.page { padding: 32px 28px; }
+
+.header { margin-bottom: 32px; }
+.welcome-sub { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+
+.profile-card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); padding: 32px; margin-bottom: 24px; }
+
+.section-title { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 20px; }
+
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--navy); margin-bottom: 8px; }
+.form-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: 'DM Sans', sans-serif; }
+.form-input:focus { outline: none; border-color: var(--sage); background: #fff; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.btn { border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: var(--sage); }
+.btn-secondary { background: var(--sage-light); color: var(--sage); }
+.btn-secondary:hover { background: var(--sage-mid); }
+
+.message { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+.message-success { background: var(--sage-light); color: var(--sage); }
+.message-error { background: var(--warm-light); color: var(--warm); }
+
+.help-text { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+.button-group { display: flex; gap: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="nav">
+    <a href="/dashboard/" class="nav-brand" style="text-decoration: none; color: inherit;">
+      <svg class="nav-logo" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+        <circle cx="14" cy="14" r="6" fill="rgba(168,203,184,0.7)"/>
+        <circle cx="14" cy="5" r="2.5" fill="#A8CBB8"/>
+        <circle cx="22.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <circle cx="5.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <line x1="14" y1="8" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="20.7" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="7.3" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+      </svg>
+      <span>CareCircle</span>
+    </a>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <a href="/notifications/" class="nav-back" style="background: none; padding: 0; margin: 0;">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1a5 5 0 0 1 5 5v2.5l1.5 2H1.5l1.5-2V6a5 5 0 0 1 5-5z" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/><path d="M6 13.5a2 2 0 0 0 4 0" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/></svg>
+        </a>
+        <div class="role-badge">{{ user_role }}</div>
+        <a href="/dashboard/" class="nav-back">← Back to Dashboard</a>
+      </div>
+  </nav>
+
+  <div class="page">
+    <div class="header">
+      <div class="welcome-sub">Account Settings</div>
+      <div class="page-title">Your Profile</div>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="profile-card">
+      <div class="section-title">Edit Profile</div>
+      <form id="profile-form" onsubmit="handleSaveProfile(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" class="form-input" id="first-name" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" class="form-input" id="last-name" required/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="email" disabled style="background: var(--surface); color: var(--muted);"/>
+          <div class="help-text">Email cannot be changed</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-input" id="username" disabled style="background: var(--surface); color: var(--muted);"/>
+          <div class="help-text">Username cannot be changed</div>
+        </div>
+        <div class="button-group">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" onclick="loadProfile()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function showMessage(text, type = 'success') {
+  const msgEl = document.getElementById('message');
+  msgEl.className = `message message-${type}`;
+  msgEl.textContent = text;
+  msgEl.style.display = 'block';
+  setTimeout(() => msgEl.style.display = 'none', 5000);
+}
+
+async function loadProfile() {
+  try {
+    const response = await fetch('/api/profile/');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    document.getElementById('first-name').value = data.first_name || '';
+    document.getElementById('last-name').value = data.last_name || '';
+    document.getElementById('email').value = data.email || '';
+    document.getElementById('username').value = data.username || '';
+  } catch (error) {
+    console.error(error);
+    showMessage('Failed to load profile.', 'error');
+  }
+}
+
+async function handleSaveProfile(event) {
+  event.preventDefault();
+  const firstName = document.getElementById('first-name').value;
+  const lastName = document.getElementById('last-name').value;
+  
+  try {
+    const response = await fetch('/api/profile/', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    showMessage('Profile updated successfully.', 'success');
+    loadProfile();
+  } catch (error) {
+    console.error(error);
+    showMessage('Failed to save profile.', 'error');
+  }
+}
+
+loadProfile();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Members Management — CareCircle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --sage: #4A7C6F;
+  --sage-light: #E8F2EF;
+  --sage-mid: #A8CBB8;
+  --warm: #C67D5A;
+  --warm-light: #F7EDE5;
+  --navy: #1E3A4F;
+  --muted: #8A96A3;
+  --surface: #FAFAF8;
+  --card: #FFFFFF;
+  --border: rgba(74,124,111,0.15);
+  --text: #1E2D3A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--text); }
+
+.app { display: flex; flex-direction: column; min-height: 100vh; max-width: 1100px; margin: 0 auto; padding: 0 0 40px; }
+
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; background: var(--navy);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; transition: opacity 0.2s; }
+.nav-brand:hover { opacity: 0.8; }
+.nav-logo { width: 28px; height: 28px; }
+.nav-brand span { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
+.nav-back { background: rgba(255,255,255,0.2); color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif; text-decoration: none; transition: background 0.2s; }
+.nav-back:hover { background: rgba(255,255,255,0.3); }
+
+.page { padding: 32px 28px; }
+
+.header { margin-bottom: 32px; }
+.welcome-sub { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+.tab { padding: 12px 20px; border: none; background: none; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: var(--navy); border-bottom-color: var(--sage); }
+.tab:hover { color: var(--navy); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.section { margin-bottom: 32px; }
+.section-title { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 16px; }
+
+.members-table {
+  width: 100%; border-collapse: collapse; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+}
+.members-table th { background: var(--surface); padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.members-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.members-table tr:last-child td { border-bottom: none; }
+.member-name { font-weight: 500; color: var(--navy); }
+.member-email { color: var(--muted); }
+.member-role { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.role-owner { background: rgba(198,125,90,0.1); color: var(--warm); }
+.role-member { background: rgba(74,124,111,0.1); color: var(--sage); }
+
+.btn { border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: var(--sage); }
+.btn-danger { background: var(--warm-light); color: var(--warm); border: 1px solid var(--warm); }
+.btn-danger:hover { background: var(--warm); color: #fff; }
+.btn-secondary { background: var(--sage-light); color: var(--sage); }
+.btn-secondary:hover { background: var(--sage-mid); }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--navy); margin-bottom: 6px; }
+.form-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-family: 'DM Sans', sans-serif; }
+.form-input:focus { outline: none; border-color: var(--sage); background: #fff; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 16px; padding: 32px; max-width: 500px; width: 90vw; }
+.modal-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: var(--navy); margin-bottom: 16px; }
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: var(--muted); }
+
+.message { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+.message-success { background: var(--sage-light); color: var(--sage); }
+.message-error { background: var(--warm-light); color: var(--warm); }
+
+.member-actions { display: flex; gap: 8px; }
+
+#loading { text-align: center; color: var(--muted); padding: 20px; }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--sage); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="nav">
+    <a href="/dashboard/" class="nav-brand" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+      <svg class="nav-logo" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+        <circle cx="14" cy="14" r="6" fill="rgba(168,203,184,0.7)"/>
+        <circle cx="14" cy="5" r="2.5" fill="#A8CBB8"/>
+        <circle cx="22.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <circle cx="5.5" cy="19" r="2.5" fill="#A8CBB8"/>
+        <line x1="14" y1="8" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="20.7" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+        <line x1="7.3" y1="17" x2="14" y2="14" stroke="#A8CBB8" stroke-width="1.2"/>
+      </svg>
+      <span>CareCircle</span>
+    </a>
+    <a href="/dashboard/" class="nav-back">← Back to Dashboard</a>
+  </nav>
+
+  <div class="page">
+    <div class="header">
+      <div class="welcome-sub">Circle Management</div>
+      <div class="page-title">Members</div>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('members')">Members</button>
+      <button class="tab" onclick="switchTab('invite')">Invite New</button>
+      <button class="tab" onclick="switchTab('notify')">Send Message</button>
+    </div>
+
+    <!-- Members Tab -->
+    <div id="tab-members" class="tab-content active">
+      <div class="section">
+        <div class="section-title">Circle Members</div>
+        <div id="members-list">
+          <div id="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invite Tab -->
+    <div id="tab-invite" class="tab-content">
+      <div class="section">
+        <div class="section-title">Invite New Member</div>
+        <form id="invite-form" onsubmit="handleInvite(event)">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" id="invite-email" required placeholder="member@example.com"/>
+          </div>
+          <button type="submit" class="btn btn-primary">Send Invite</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notify Tab -->
+    <div id="tab-notify" class="tab-content">
+      <div class="section">
+        <div class="section-title">Send Message to Members</div>
+        <form id="notify-form" onsubmit="handleNotify(event)">
+          <div class="form-group">
+            <label class="form-label">Recipients</label>
+            <div id="members-checkboxes" style="max-height: 200px; overflow-y: auto;"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input type="text" class="form-input" id="notify-title" required placeholder="Message subject"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message</label>
+            <textarea class="form-input" id="notify-message" required placeholder="Your message..." rows="4" style="resize: vertical;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Send to Selected</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const circleId = {{ circle_id }};
+let membersData = [];
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  if (tabName === 'notify') loadNotifyCheckboxes();
+}
+
+function showMessage(text, type = 'success') {
+  const msgEl = document.getElementById('message');
+  msgEl.className = `message message-${type}`;
+  msgEl.textContent = text;
+  msgEl.style.display = 'block';
+  setTimeout(() => msgEl.style.display = 'none', 5000);
+}
+
+async function loadMembers() {
+  try {
+    const response = await fetch(`/api/circles/${circleId}/members/`);
+    if (!response.ok) {
+      if (response.status === 403) {
+        document.getElementById('members-list').innerHTML = '<p>You need owner permissions to view members.</p>';
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return;
+    }
+    membersData = await response.json();
+    renderMembersList();
+  } catch (error) {
+    console.error(error);
+    showMessage('Failed to load members.', 'error');
+  }
+}
+
+function renderMembersList() {
+  if (membersData.length === 0) {
+    document.getElementById('members-list').innerHTML = '<p>No members in this circle yet.</p>';
+    return;
+  }
+
+  let html = '<table class="members-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead><tbody>';
+  for (const member of membersData) {
+    const joinedDate = new Date(member.joined_at).toLocaleDateString();
+    const roleClass = member.role === 'owner' ? 'role-owner' : 'role-member';
+    html += `
+      <tr>
+        <td><div class="member-name">${member.full_name}</div></td>
+        <td><div class="member-email">${member.email}</div></td>
+        <td><span class="member-role ${roleClass}">${member.role}</span></td>
+        <td>${joinedDate}</td>
+        <td>
+          ${member.role === 'member' ? `<button type="button" class="btn btn-danger" onclick="removeMember(${member.user_id})">Remove</button>` : '<span style="color: var(--muted);">—</span>'}
+        </td>
+      </tr>
+    `;
+  }
+  html += '</tbody></table>';
+  document.getElementById('members-list').innerHTML = html;
+}
+
+async function removeMember(userId) {
+  if (!confirm('Remove this member from the circle?')) return;
+  try {
+    const response = await fetch(`/api/circles/${circleId}/members/${userId}/`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    showMessage('Member removed successfully.', 'success');
+    loadMembers();
+  } catch (error) {
+    console.error(error);
+    showMessage('Failed to remove member.', 'error');
+  }
+}
+
+async function handleInvite(event) {
+  event.preventDefault();
+  const email = document.getElementById('invite-email').value;
+  try {
+    const response = await fetch(`/api/circles/${circleId}/members/invite/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role: 'member' })
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || `HTTP ${response.status}`);
+    }
+    showMessage(`Invited ${email} successfully.`, 'success');
+    document.getElementById('invite-form').reset();
+    loadMembers();
+  } catch (error) {
+    console.error(error);
+    showMessage(error.message || 'Failed to invite member.', 'error');
+  }
+}
+
+async function loadNotifyCheckboxes() {
+  let html = '';
+  for (const member of membersData) {
+    html += `
+      <div style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+        <input type="checkbox" id="recipient-${member.user_id}" value="${member.user_id}" style="margin-right: 8px;"/>
+        <label for="recipient-${member.user_id}" style="cursor: pointer; font-size: 13px;">${member.full_name} (${member.email})</label>
+      </div>
+    `;
+  }
+  document.getElementById('members-checkboxes').innerHTML = html;
+}
+
+async function handleNotify(event) {
+  event.preventDefault();
+  const checked = document.querySelectorAll('#members-checkboxes input:checked');
+  if (checked.length === 0) {
+    showMessage('Select at least one recipient.', 'error');
+    return;
+  }
+  const recipientIds = Array.from(checked).map(c => parseInt(c.value));
+  const title = document.getElementById('notify-title').value;
+  const message = document.getElementById('notify-message').value;
+
+  try {
+    const response = await fetch(`/api/circles/${circleId}/notifications/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient_ids: recipientIds, title, message })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    showMessage(`Message sent to ${data.count} member(s).`, 'success');
+    document.getElementById('notify-form').reset();
+  } catch (error) {
+    console.error(error);
+    showMessage('Failed to send message.', 'error');
+  }
+}
+
+loadMembers();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CareCircle — Coordinate Care, Together</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #16293B;
+  --navy-mid: #1E3A4F;
+  --navy-light: #2A4F6A;
+  --sage: #4A7C6F;
+  --sage-light: #E8F2EF;
+  --sage-mid: #A8CBB8;
+  --sage-pale: #F2F8F5;
+  --warm: #C67D5A;
+  --warm-light: #F7EDE5;
+  --cream: #FAF8F4;
+  --stone: #F0EDE6;
+  --text: #16293B;
+  --muted: #7A8896;
+  --border: rgba(74,124,111,0.15);
+  --card: #FFFFFF;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); overflow-x: hidden; }
+
+/* NAV */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 60px;
+  background: rgba(250,248,244,0.88);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(74,124,111,0.1);
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; transition: opacity 0.2s; }
+.nav-brand:hover { opacity: 0.7; }
+.brand-name { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
+.nav-links { display: flex; align-items: center; gap: 32px; }
+.nav-link { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-link:hover { color: var(--sage); }
+.nav-cta { display: flex; gap: 10px; align-items: center; }
+.btn-ghost { background: none; border: 1px solid var(--border); border-radius: 10px; padding: 9px 20px; font-size: 13px; font-weight: 500; color: var(--navy); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; text-decoration: none; display: inline-block; }
+.btn-ghost:hover { border-color: var(--sage); color: var(--sage); }
+.btn-primary { background: var(--navy); border: none; border-radius: 10px; padding: 9px 20px; font-size: 13px; font-weight: 500; color: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; text-decoration: none; display: inline-block; }
+.btn-primary:hover { background: var(--sage); }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 60px;
+  padding-top: 88px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 60%, rgba(168,203,184,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 20% 30%, rgba(198,125,90,0.07) 0%, transparent 60%);
+}
+.hero-dots {
+  position: absolute; inset: 0; z-index: 0;
+  background-image: radial-gradient(rgba(74,124,111,0.12) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+}
+.hero-left { display: flex; flex-direction: column; justify-content: center; padding: 80px 60px 80px 0; position: relative; z-index: 1; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--sage-light); border: 1px solid rgba(74,124,111,0.2);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; font-weight: 500; color: var(--sage);
+  margin-bottom: 28px; width: fit-content;
+  animation: fadeUp 0.6s ease both;
+}
+.eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+.hero-title { font-family: 'Lora', serif; font-size: clamp(38px, 4.5vw, 60px); font-weight: 600; line-height: 1.1; color: var(--navy); letter-spacing: -1px; margin-bottom: 24px; animation: fadeUp 0.6s 0.1s ease both; }
+.hero-title em { font-style: italic; color: var(--sage); }
+.hero-title .underline { position: relative; display: inline-block; }
+.hero-title .underline::after { content: ''; position: absolute; bottom: 4px; left: 0; right: 0; height: 3px; background: var(--warm); border-radius: 2px; opacity: 0.6; }
+
+.hero-sub { font-size: 17px; font-weight: 300; color: var(--muted); line-height: 1.7; max-width: 460px; margin-bottom: 40px; animation: fadeUp 0.6s 0.2s ease both; }
+
+.hero-actions { display: flex; align-items: center; gap: 16px; animation: fadeUp 0.6s 0.3s ease both; }
+.btn-hero { background: var(--navy); color: #fff; border: none; border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.btn-hero:hover { background: var(--sage); transform: translateY(-1px); }
+.btn-hero-outline { background: none; color: var(--navy); border: 1px solid rgba(22,41,59,0.2); border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; text-decoration: none; }
+.btn-hero-outline:hover { border-color: var(--sage); color: var(--sage); }
+
+.hero-proof { display: flex; align-items: center; gap: 14px; margin-top: 40px; animation: fadeUp 0.6s 0.4s ease both; }
+.proof-faces { display: flex; }
+.proof-face { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--cream); margin-left: -8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; }
+.proof-face:first-child { margin-left: 0; }
+.proof-text { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.proof-text strong { color: var(--navy); font-weight: 500; }
+
+/* AUTH */
+.hero-right { display: flex; align-items: center; justify-content: center; padding: 80px 0 80px 60px; position: relative; z-index: 1; animation: fadeLeft 0.7s 0.2s ease both; }
+.auth-card { background: var(--card); border-radius: 24px; border: 1px solid rgba(74,124,111,0.15); box-shadow: 0 20px 60px rgba(22,41,59,0.08), 0 4px 16px rgba(22,41,59,0.04); width: 100%; max-width: 420px; overflow: hidden; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.auth-tab { flex: 1; padding: 18px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; position: relative; }
+.auth-tab.active { color: var(--navy); }
+.auth-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 20%; right: 20%; height: 2px; background: var(--sage); border-radius: 2px 2px 0 0; }
+.auth-body { padding: 32px; }
+.auth-panel { display: none; }
+.auth-panel.active { display: block; }
+.auth-greeting { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+.auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.field { margin-bottom: 16px; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--navy); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; display: block; }
+.field-input { width: 100%; border: 1px solid rgba(22,41,59,0.15); border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--navy); background: var(--cream); outline: none; transition: border-color 0.2s, background 0.2s; }
+.field-input:focus { border-color: var(--sage); background: #fff; }
+.field-input::placeholder { color: var(--muted); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.password-wrap { position: relative; }
+.password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); display: flex; align-items: center; }
+.forgot { text-align: right; margin-top: -8px; margin-bottom: 20px; }
+.forgot a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.forgot a:hover { color: var(--sage); }
+.btn-auth { width: 100%; background: var(--navy); color: #fff; border: none; border-radius: 11px; padding: 13px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; margin-bottom: 20px; }
+.btn-auth:hover { background: var(--sage); }
+.divider { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text { font-size: 12px; color: var(--muted); }
+.btn-google { width: 100%; background: var(--cream); border: 1px solid var(--border); border-radius: 11px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 400; color: var(--navy); font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+.btn-google:hover { border-color: var(--sage); background: var(--sage-pale); }
+.auth-terms { font-size: 11px; color: var(--muted); text-align: center; margin-top: 20px; line-height: 1.5; }
+.auth-terms a { color: var(--sage); text-decoration: none; }
+.role-select { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.role-option { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; text-align: center; }
+.role-option:hover { border-color: var(--sage-mid); }
+.role-option.selected { border-color: var(--sage); background: var(--sage-light); }
+.role-option-label { font-size: 12px; font-weight: 500; color: var(--navy); margin-top: 4px; }
+
+/* FEATURES */
+.features { padding: 100px 60px; background: var(--cream); }
+.section-eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--sage); margin-bottom: 16px; }
+.section-title { font-family: 'Lora', serif; font-size: clamp(28px, 3.5vw, 44px); font-weight: 600; color: var(--navy); line-height: 1.15; letter-spacing: -0.5px; max-width: 560px; margin-bottom: 16px; }
+.section-title em { font-style: italic; color: var(--sage); }
+.section-sub { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.7; margin-bottom: 60px; font-weight: 300; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.feature-card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); padding: 32px; transition: transform 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
+.feature-card:hover { transform: translateY(-3px); border-color: var(--sage-mid); }
+.feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: 0; transition: opacity 0.2s; }
+.feature-card:hover::before { opacity: 1; }
+.fc1::before { background: var(--sage); }
+.fc2::before { background: #7EB5D6; }
+.fc3::before { background: var(--warm); }
+.fc4::before { background: #8B6BD6; }
+.fc5::before { background: var(--sage); }
+.fc6::before { background: #7EB5D6; }
+.feature-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.fi-sage { background: var(--sage-light); }
+.fi-blue { background: #EBF4FB; }
+.fi-warm { background: var(--warm-light); }
+.fi-purple { background: #F0EBF8; }
+.feature-title { font-size: 17px; font-weight: 600; color: var(--navy); margin-bottom: 10px; font-family: 'Lora', serif; }
+.feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; font-weight: 300; }
+
+/* HOW IT WORKS */
+.how { padding: 100px 60px; background: var(--navy); position: relative; overflow: hidden; }
+.how-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(74,124,111,0.15) 0%, transparent 70%); }
+.how-dots { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 28px 28px; }
+.how .section-eyebrow { color: var(--sage-mid); }
+.how .section-title { color: #fff; }
+.how .section-sub { color: rgba(255,255,255,0.5); }
+.steps { display: flex; gap: 0; position: relative; z-index: 1; }
+.step { flex: 1; padding: 0 40px 0 0; position: relative; }
+.step:last-child { padding-right: 0; }
+.step-connector { position: absolute; top: 24px; left: 68px; right: 0; height: 1px; background: repeating-linear-gradient(90deg, rgba(168,203,184,0.3) 0, rgba(168,203,184,0.3) 6px, transparent 6px, transparent 12px); }
+.step:last-child .step-connector { display: none; }
+.step-num { width: 48px; height: 48px; border-radius: 50%; background: rgba(74,124,111,0.2); border: 1px solid rgba(168,203,184,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--sage-mid); margin-bottom: 24px; }
+.step-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+.step-desc { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.65; font-weight: 300; }
+
+/* QUOTE */
+.quote-section { padding: 100px 60px; background: var(--stone); display: flex; align-items: center; gap: 80px; }
+.quote-visual { flex-shrink: 0; width: 360px; background: var(--card); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+.qv-header { background: var(--navy); padding: 14px 18px; display: flex; align-items: center; gap: 8px; }
+.qv-brand { font-family: 'Lora', serif; font-size: 14px; color: #fff; font-weight: 600; }
+.qv-body { padding: 18px; }
+.qv-alert { background: rgba(198,125,90,0.1); border: 1px solid rgba(198,125,90,0.25); border-left: 3px solid var(--warm); border-radius: 0 10px 10px 0; padding: 12px 14px; margin-bottom: 14px; }
+.qv-alert-title { font-size: 12px; font-weight: 600; color: var(--warm); margin-bottom: 4px; }
+.qv-alert-text { font-size: 12px; color: #8A6050; line-height: 1.5; }
+.qv-signals { display: flex; gap: 6px; flex-wrap: wrap; }
+.qv-pill { font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+.qv-warn { background: rgba(198,125,90,0.12); color: var(--warm); }
+.qv-ok { background: var(--sage-light); color: var(--sage); }
+.qv-watch { background: #EBF4FB; color: #5B9BD6; }
+.quote-content { flex: 1; }
+.quote-mark { font-family: 'Lora', serif; font-size: 72px; color: var(--sage-mid); line-height: 0.7; margin-bottom: 20px; display: block; }
+.quote-text { font-family: 'Lora', serif; font-size: 22px; font-weight: 400; font-style: italic; color: var(--navy); line-height: 1.55; margin-bottom: 24px; }
+.quote-attr { font-size: 14px; color: var(--muted); }
+.quote-attr strong { color: var(--navy); font-weight: 500; }
+
+/* PRICING */
+.pricing { padding: 100px 60px; background: var(--cream); }
+.pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; max-width: 920px; margin: 0 auto; }
+.pricing-card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); padding: 32px; transition: transform 0.2s; }
+.pricing-card:hover { transform: translateY(-2px); }
+.pricing-card.featured { background: var(--navy); border-color: transparent; position: relative; }
+.pricing-card.featured::before { content: 'Most popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--sage); color: #fff; font-size: 11px; font-weight: 600; padding: 4px 14px; border-radius: 20px; white-space: nowrap; }
+.plan-name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
+.featured .plan-name { color: var(--sage-mid); }
+.plan-price { font-family: 'Lora', serif; font-size: 36px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+.featured .plan-price { color: #fff; }
+.plan-cycle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.featured .plan-cycle { color: rgba(255,255,255,0.5); }
+.plan-features { list-style: none; margin-bottom: 28px; }
+.plan-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border); }
+.featured .plan-feature { color: rgba(255,255,255,0.65); border-bottom-color: rgba(255,255,255,0.08); }
+.plan-feature:last-child { border-bottom: none; }
+.plan-check { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-plan { width: 100%; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+.btn-plan-outline { background: none; border: 1px solid var(--border); color: var(--navy); }
+.btn-plan-outline:hover { border-color: var(--sage); color: var(--sage); }
+.btn-plan-featured { background: var(--sage); color: #fff; border: none; }
+.btn-plan-featured:hover { background: #3a6b5e; }
+
+/* FOOTER */
+.footer { background: var(--navy); padding: 60px; color: rgba(255,255,255,0.5); }
+.footer-inner { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 40px; }
+.footer-brand { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+.footer-tagline { font-size: 13px; line-height: 1.5; max-width: 240px; }
+.footer-links { display: flex; gap: 60px; }
+.footer-col-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #fff; margin-bottom: 16px; }
+.footer-col a { display: block; font-size: 13px; color: rgba(255,255,255,0.45); text-decoration: none; margin-bottom: 10px; transition: color 0.2s; }
+.footer-col a:hover { color: var(--sage-mid); }
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(22,41,59,0.6); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 24px; padding: 40px; width: 420px; max-width: 90vw; position: relative; animation: fadeUp 0.3s ease; }
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: var(--muted); padding: 6px; border-radius: 6px; transition: background 0.15s; }
+.modal-close:hover { background: var(--stone); }
+
+@media (max-width: 900px) {
+  .navbar { padding: 16px 24px; }
+  .nav-links { display: none; }
+  .hero { grid-template-columns: 1fr; padding: 0 24px; padding-top: 80px; }
+  .hero-left { padding: 60px 0 40px; }
+  .hero-right { padding: 0 0 60px; justify-content: flex-start; }
+  .auth-card { max-width: 100%; }
+  .features, .how, .quote-section, .pricing, .footer { padding: 60px 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .steps { flex-direction: column; gap: 40px; }
+  .step-connector { display: none; }
+  .quote-section { flex-direction: column; }
+  .quote-visual { width: 100%; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; gap: 40px; }
+  .footer-links { flex-direction: column; gap: 32px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="nav-brand" href="/dashboard/">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+      <circle cx="15" cy="15" r="14" stroke="rgba(74,124,111,0.3)" stroke-width="1"/>
+      <circle cx="15" cy="15" r="5" fill="rgba(74,124,111,0.2)"/>
+      <circle cx="15" cy="15" r="2.5" fill="#4A7C6F"/>
+      <circle cx="15" cy="3.5" r="2.2" fill="#4A7C6F"/>
+      <circle cx="24.6" cy="20" r="2.2" fill="#4A7C6F"/>
+      <circle cx="5.4" cy="20" r="2.2" fill="#4A7C6F"/>
+      <line x1="15" y1="6" x2="15" y2="10" stroke="#4A7C6F" stroke-width="1.2"/>
+      <line x1="22.5" y1="18" x2="17.5" y2="14.5" stroke="#4A7C6F" stroke-width="1.2"/>
+      <line x1="7.5" y1="18" x2="12.5" y2="14.5" stroke="#4A7C6F" stroke-width="1.2"/>
+    </svg>
+    <span class="brand-name">CareCircle</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="#features">Features</a>
+    <a class="nav-link" href="#how">How it works</a>
+    <a class="nav-link" href="#pricing">Pricing</a>
+  </div>
+  <div class="nav-cta">
+    <a class="btn-ghost" href="#" onclick="openModal();return false;">Sign in</a>
+    <a class="btn-primary" href="#" onclick="switchTab('signup');scrollToAuth();return false;">Get started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-dots"></div>
+
+  <div class="hero-left">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-dot"></div>
+      Now in early access
+    </div>
+    <h1 class="hero-title">
+      Care, <em>coordinated</em><br>
+      by the people who<br>
+      <span class="underline">love her most.</span>
+    </h1>
+    <p class="hero-sub">
+      CareCircle brings family, friends, and professionals together around a single care recipient — with real-time tasks, voice-powered logs, and gentle AI insights that catch issues before they become emergencies.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-hero" href="#" onclick="switchTab('signup');scrollToAuth();return false;">
+        Start your Circle
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn-hero-outline" href="#how">See how it works</a>
+    </div>
+    <div class="hero-proof">
+      <div class="proof-faces">
+        <div class="proof-face" style="background:#4A7C6F;">S</div>
+        <div class="proof-face" style="background:#7EB5D6;">J</div>
+        <div class="proof-face" style="background:#8B6BD6;">A</div>
+        <div class="proof-face" style="background:#C67D5A;">R</div>
+        <div class="proof-face" style="background:#16293B;">+</div>
+      </div>
+      <div class="proof-text"><strong>2,400+ families</strong> coordinating care<br>across 18 countries</div>
+    </div>
+  </div>
+
+  <div class="hero-right" id="auth-section">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Welcome back</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Join CareCircle</button>
+      </div>
+      <div class="auth-body">
+
+        <div class="auth-panel active" id="panel-login">
+          <div class="auth-greeting">Good to see you again</div>
+          <div class="auth-sub">Sign in to your Care Circle</div>
+          {% if login_error %}
+          <div style="background:var(--warm-light);color:var(--warm);border:1px solid rgba(198,125,90,0.3);border-radius:10px;padding:9px 12px;font-size:12px;margin-bottom:14px;">{{ login_error }}</div>
+          {% endif %}
+          <form method="post" action="/login/">
+            {% csrf_token %}
+            <div class="field"><label class="field-label">Email or username</label><input name="identifier" type="text" class="field-input" placeholder="you@example.com" required/></div>
+            <div class="field">
+              <label class="field-label">Password</label>
+              <div class="password-wrap">
+                <input name="password" type="password" class="field-input" id="pw-login" placeholder="Your password" required/>
+                <button class="password-toggle" onclick="togglePw('pw-login')" type="button">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="forgot"><a href="#">Forgot password?</a></div>
+            <button class="btn-auth" type="submit">Sign in</button>
+          </form>
+          <div class="divider"><div class="divider-line"></div><div class="divider-text">or continue with</div><div class="divider-line"></div></div>
+          <button class="btn-google">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M15.4 8.18c0-.57-.05-1.12-.14-1.64H8v3.1h4.17a3.56 3.56 0 0 1-1.55 2.34v1.95h2.5C14.6 12.5 15.4 10.5 15.4 8.18z" fill="#4285F4"/><path d="M8 16c2.1 0 3.87-.7 5.16-1.88l-2.51-1.95c-.7.47-1.59.74-2.65.74-2.04 0-3.77-1.38-4.39-3.23H1.02v2.01A7.99 7.99 0 0 0 8 16z" fill="#34A853"/><path d="M3.61 9.68A4.8 4.8 0 0 1 3.36 8c0-.58.1-1.15.25-1.68V4.31H1.02A8 8 0 0 0 0 8c0 1.29.31 2.5.85 3.58l2.76-1.9z" fill="#FBBC05"/><path d="M8 3.18c1.15 0 2.18.4 2.99 1.17l2.24-2.24A7.93 7.93 0 0 0 8 0 7.99 7.99 0 0 0 1.02 4.31l2.59 2.01C4.23 4.56 5.96 3.18 8 3.18z" fill="#EA4335"/></svg>
+            Continue with Google
+          </button>
+          <div class="auth-terms">Don't have an account? <a href="#" onclick="switchTab('signup');return false;">Create one free →</a></div>
+        </div>
+
+        <div class="auth-panel" id="panel-signup">
+          <div class="auth-greeting">Create your Circle</div>
+          <div class="auth-sub">Free to start — no credit card needed</div>
+          <div class="field">
+            <div style="font-size:11px;color:var(--muted);font-weight:500;margin-bottom:8px;">I am joining as a</div>
+            <div class="role-select">
+              <div class="role-option selected" onclick="selectRole(this)">
+                <div style="font-size:18px;">🏠</div>
+                <div class="role-option-label">Caregiver</div>
+              </div>
+              <div class="role-option" onclick="selectRole(this)">
+                <div style="font-size:18px;">👨‍👩‍👧</div>
+                <div class="role-option-label">Family</div>
+              </div>
+              <div class="role-option" onclick="selectRole(this)">
+                <div style="font-size:18px;">🤝</div>
+                <div class="role-option-label">Volunteer</div>
+              </div>
+              <div class="role-option" onclick="selectRole(this)">
+                <div style="font-size:18px;">⚕️</div>
+                <div class="role-option-label">Professional</div>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label class="field-label">First name</label><input type="text" class="field-input" placeholder="Sarah"/></div>
+            <div class="field"><label class="field-label">Last name</label><input type="text" class="field-input" placeholder="Johnson"/></div>
+          </div>
+          <div class="field"><label class="field-label">Email address</label><input type="email" class="field-input" placeholder="you@example.com"/></div>
+          <div class="field">
+            <label class="field-label">Password</label>
+            <div class="password-wrap">
+              <input type="password" class="field-input" id="pw-signup" placeholder="At least 8 characters"/>
+              <button class="password-toggle" onclick="togglePw('pw-signup')" type="button">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
+              </button>
+            </div>
+          </div>
+          <button class="btn-auth" style="margin-top:4px;">Create my account</button>
+          <div class="auth-terms">By signing up you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>. CareCircle never trains on your care data.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="reveal">
+    <div class="section-eyebrow">What CareCircle does</div>
+    <h2 class="section-title">Everything invisible<br>about care, <em>made visible.</em></h2>
+    <p class="section-sub">Care coordination fails because the effort is scattered. CareCircle brings it all into one calm, intelligent space.</p>
+  </div>
+  <div class="features-grid reveal">
+    <div class="feature-card fc1">
+      <div class="feature-icon fi-sage">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="#4A7C6F" stroke-width="1.5"/><circle cx="11" cy="11" r="3.5" fill="rgba(74,124,111,0.2)"/><circle cx="11" cy="2" r="2" fill="#4A7C6F"/><circle cx="19.5" cy="16" r="2" fill="#4A7C6F"/><circle cx="2.5" cy="16" r="2" fill="#4A7C6F"/><line x1="11" y1="4" x2="11" y2="7.5" stroke="#4A7C6F" stroke-width="1.2"/><line x1="17.8" y1="14.5" x2="14.2" y2="12.5" stroke="#4A7C6F" stroke-width="1.2"/><line x1="4.2" y1="14.5" x2="7.8" y2="12.5" stroke="#4A7C6F" stroke-width="1.2"/></svg>
+      </div>
+      <div class="feature-title">The Circle Engine</div>
+      <div class="feature-desc">Private, walled-garden groups for family and volunteers. Role-based access means the right people see the right things — nothing more.</div>
+    </div>
+    <div class="feature-card fc2">
+      <div class="feature-icon fi-blue">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="4" width="18" height="14" rx="3" stroke="#7EB5D6" stroke-width="1.5"/><path d="M6 9h10M6 13h6" stroke="#7EB5D6" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feature-title">Task Claim Protocol</div>
+      <div class="feature-desc">A real-time board where tasks move from Open to Claimed to Verified. Claims expire automatically — no silent failures, no guilt.</div>
+    </div>
+    <div class="feature-card fc3">
+      <div class="feature-icon fi-warm">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="8" y="2" width="6" height="11" rx="3" stroke="#C67D5A" stroke-width="1.5"/><path d="M4.5 10a6.5 6.5 0 0 0 13 0" stroke="#C67D5A" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="16.5" x2="11" y2="20" stroke="#C67D5A" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="20" x2="14" y2="20" stroke="#C67D5A" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feature-title">Voice Care Logs</div>
+      <div class="feature-desc">Record a 30-second note. Whisper transcribes it. GPT-4o-mini extracts health signals. All without the caregiver touching a keyboard.</div>
+    </div>
+    <div class="feature-card fc4">
+      <div class="feature-icon fi-purple">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M2 11h3l3 6 4-12 3 7 2-1h3" stroke="#8B6BD6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="feature-title">Anomaly Detection</div>
+      <div class="feature-desc">Background analysis of health log patterns. If hydration drops over three days, you get a gentle watch-level alert — not an alarm.</div>
+    </div>
+    <div class="feature-card fc5">
+      <div class="feature-icon fi-sage">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="2" width="16" height="18" rx="3" stroke="#4A7C6F" stroke-width="1.5"/><path d="M7 7h8M7 11h8M7 15h5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feature-title">Intelligent Care Feed</div>
+      <div class="feature-desc">A unified timeline of human logs, AI summaries, and system alerts. Chronological, read-only history that builds trust over time.</div>
+    </div>
+    <div class="feature-card fc6">
+      <div class="feature-icon fi-blue">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="#7EB5D6" stroke-width="1.5"/><path d="M11 6v5l3.5 2" stroke="#7EB5D6" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feature-title">Temporal Consent</div>
+      <div class="feature-desc">Circle membership can expire automatically. Professionals and respite workers get access that ends when their role ends.</div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="how-bg"></div>
+  <div class="how-dots"></div>
+  <div style="position:relative;z-index:1;">
+    <div class="reveal">
+      <div class="section-eyebrow">How it works</div>
+      <h2 class="section-title">From voice note<br>to <em style="color:var(--sage-mid);">prevented crisis.</em></h2>
+      <p class="section-sub">The full journey, end to end, in under 60 seconds of caregiver effort.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-connector"></div>
+        <div class="step-num">1</div>
+        <div class="step-title">Record a note</div>
+        <div class="step-desc">Tap record. Say what you observed — Margaret didn't drink much today, seemed tired. Done in 20 seconds.</div>
+      </div>
+      <div class="step">
+        <div class="step-connector"></div>
+        <div class="step-num">2</div>
+        <div class="step-title">AI does the work</div>
+        <div class="step-desc">Whisper transcribes. GPT-4o-mini extracts health signals — hydration low, fatigue present, mobility reduced.</div>
+      </div>
+      <div class="step">
+        <div class="step-connector"></div>
+        <div class="step-num">3</div>
+        <div class="step-title">Patterns emerge</div>
+        <div class="step-desc">Anomaly detection watches across logs. Three days of low hydration is flagged as a watch-level signal.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-title">Gentle awareness</div>
+        <div class="step-desc">The primary caregiver sees a calm alert in the Care Feed. No alarms. Just early, actionable awareness.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="quote-section">
+  <div class="quote-visual reveal">
+    <div class="qv-header">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><circle cx="9" cy="9" r="3.5" fill="rgba(168,203,184,0.5)"/><circle cx="9" cy="2" r="1.6" fill="#A8CBB8"/><circle cx="15.5" cy="13" r="1.6" fill="#A8CBB8"/><circle cx="2.5" cy="13" r="1.6" fill="#A8CBB8"/></svg>
+      <span class="qv-brand">CareCircle</span>
+    </div>
+    <div class="qv-body">
+      <div class="qv-alert">
+        <div class="qv-alert-title">Watch · Hydration</div>
+        <div class="qv-alert-text">Low hydration detected across 3 consecutive voice logs. Consider reminding during next visit.</div>
+      </div>
+      <div class="qv-signals">
+        <div class="qv-pill qv-warn">Hydration · Low</div>
+        <div class="qv-pill qv-warn">Fatigue</div>
+        <div class="qv-pill qv-watch">Mobility · Reduced</div>
+        <div class="qv-pill qv-ok">Mood · Positive</div>
+      </div>
+    </div>
+  </div>
+  <div class="quote-content reveal">
+    <span class="quote-mark">"</span>
+    <p class="quote-text">I used to lie awake worrying I was missing something. Now CareCircle catches the patterns I can't see when I'm exhausted. It doesn't panic me — it just quietly tells me what to pay attention to.</p>
+    <div class="quote-attr"><strong>Sarah M.</strong> — Primary caregiver, caring for her mother Margaret</div>
+  </div>
+</section>
+
+<section class="pricing" id="pricing">
+  <div class="reveal" style="text-align:center;margin-bottom:60px;">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-title" style="margin:0 auto 16px;text-align:center;">Simple, honest pricing</h2>
+    <p class="section-sub" style="margin:0 auto;text-align:center;">Start free. Upgrade when your Circle needs more.</p>
+  </div>
+  <div class="pricing-grid reveal">
+    <div class="pricing-card">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">Free</div>
+      <div class="plan-cycle">Forever, no card needed</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>1 Care Circle</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 4 members</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Task board</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Care feed &amp; text logs</li>
+        <li class="plan-feature" style="opacity:0.4;"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/></svg>Voice logs &amp; AI</li>
+      </ul>
+      <button class="btn-plan btn-plan-outline" onclick="switchTab('signup');scrollToAuth();">Get started free</button>
+    </div>
+    <div class="pricing-card featured">
+      <div class="plan-name">Circle</div>
+      <div class="plan-price">$12<span style="font-size:16px;font-weight:300;font-family:'DM Sans',sans-serif;"> /mo</span></div>
+      <div class="plan-cycle">Billed monthly · cancel anytime</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#A8CBB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Unlimited members</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#A8CBB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Voice logs + AI transcription</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#A8CBB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Health signal extraction</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#A8CBB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Anomaly detection &amp; alerts</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#A8CBB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Temporal consent controls</li>
+      </ul>
+      <button class="btn-plan btn-plan-featured" onclick="switchTab('signup');scrollToAuth();">Start 14-day free trial</button>
+    </div>
+    <div class="pricing-card">
+      <div class="plan-name">Professional</div>
+      <div class="plan-price">$29<span style="font-size:16px;font-weight:300;font-family:'DM Sans',sans-serif;"> /mo</span></div>
+      <div class="plan-cycle">For agencies &amp; care professionals</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Multiple Circles</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Circle</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Longitudinal insights</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Caregiver load balancing</li>
+        <li class="plan-feature"><svg class="plan-check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="#4A7C6F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority support</li>
+      </ul>
+      <button class="btn-plan btn-plan-outline">Contact us</button>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">CareCircle</div>
+      <div class="footer-tagline">Infrastructure for care. Built for the people who show up, every single day.</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <div class="footer-col-title">Product</div>
+        <a href="#">Features</a><a href="#">Pricing</a><a href="#">Security</a><a href="#">Roadmap</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Company</div>
+        <a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Legal</div>
+        <a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Data Processing</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© 2025 CareCircle. All rights reserved.</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);">CareCircle is assistive technology, not a medical device.</div>
+  </div>
+</footer>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <div style="font-family:'Lora',serif;font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px;">Welcome back</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">Sign in to your Care Circle</div>
+    <form method="post" action="/login/">
+      {% csrf_token %}
+      <div class="field"><label class="field-label">Email or username</label><input name="identifier" type="text" class="field-input" placeholder="you@example.com" required/></div>
+      <div class="field"><label class="field-label">Password</label><input name="password" type="password" class="field-input" placeholder="Your password" required/></div>
+      <div class="forgot" style="margin-bottom:20px;"><a href="#">Forgot password?</a></div>
+      <button class="btn-auth" type="submit">Sign in</button>
+    </form>
+    <div class="auth-terms">New here? <a href="#" onclick="closeModal();switchTab('signup');scrollToAuth();return false;">Create an account →</a></div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+function scrollToAuth() {
+  document.getElementById('auth-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function selectRole(el) {
+  document.querySelectorAll('.role-option').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function togglePw(id) {
+  const input = document.getElementById(id);
+  input.type = input.type === 'text' ? 'password' : 'text';
+}
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
