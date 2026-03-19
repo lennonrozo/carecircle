@@ -237,6 +237,9 @@ This repo includes GitHub Actions workflows in [.github/workflows/](.github/work
 In GitHub repository settings (`Settings > Secrets and variables > Actions`), add:
 
 - `VERCEL_DEPLOY_HOOK_URL`
+- `VERCEL_HEALTHCHECK_URL` (example: `https://your-app.vercel.app/api/health/`)
+
+The CD workflow triggers a Vercel deploy hook, then runs a post-deploy smoke test by polling `VERCEL_HEALTHCHECK_URL` until it gets `{"status":"ok"}` (or fails after retries).
 
 ### Vercel project setup
 
@@ -270,7 +273,7 @@ After creating the Vercel project, create a Deploy Hook in Vercel and save its U
 2. Point `DATABASE_URL` to PostgreSQL
 3. Run deploy checks
 4. Configure Vercel build command (`bash scripts/vercel-build.sh`)
-5. Add `VERCEL_DEPLOY_HOOK_URL` secret in GitHub
+5. Add `VERCEL_DEPLOY_HOOK_URL` and `VERCEL_HEALTHCHECK_URL` secrets in GitHub
 6. Push to `main` and verify deployment succeeds
 
 ### Release script

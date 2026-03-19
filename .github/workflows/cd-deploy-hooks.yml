@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      VERCEL_HEALTHCHECK_URL: ${{ secrets.VERCEL_HEALTHCHECK_URL }}
     steps:
       - name: Trigger Vercel deploy hook
         run: |
@@ -25,3 +26,31 @@ jobs:
             exit 0
           fi
           curl --fail --silent --show-error -X POST "$VERCEL_DEPLOY_HOOK_URL"
+
+      - name: Post-deploy health check
+        run: |
+          if [ -z "$VERCEL_HEALTHCHECK_URL" ]; then
+            echo "VERCEL_HEALTHCHECK_URL is not set. Skipping smoke test."
+            exit 0
+          fi
+
+          echo "Waiting for deployment rollout before smoke test..."
+          sleep 20
+
+          for attempt in $(seq 1 12); do
+            echo "Health check attempt ${attempt}/12"
+            response="$(curl --silent --show-error --max-time 15 "$VERCEL_HEALTHCHECK_URL" || true)"
+
+            if [ -n "$response" ]; then
+              status="$(python -c 'import json,sys; print(json.loads(sys.stdin.read()).get("status", ""))' <<< "$response" 2>/dev/null || true)"
+              if [ "$status" = "ok" ]; then
+                echo "Smoke test passed. status=ok"
+                exit 0
+              fi
+            fi
+
+            sleep 10
+          done
+
+          echo "Smoke test failed: /api/health/ never returned status=ok"
+          exit 1
