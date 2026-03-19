@@ -34,6 +34,11 @@ def _env_list(name, default=''):
     return [item.strip() for item in raw.split(',') if item.strip()]
 
 
+def _append_unique(items, value):
+    if value and value not in items:
+        items.append(value)
+
+
 def _env_int(name, default=0):
     value = os.getenv(name)
     if value is None:
@@ -56,6 +61,11 @@ CSRF_TRUSTED_ORIGINS = _env_list(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
     'http://127.0.0.1:8000,http://localhost:8000,http://127.0.0.1:8002,http://localhost:8002',
 )
+
+vercel_url = (os.getenv('VERCEL_URL') or '').strip().replace('https://', '').replace('http://', '').rstrip('/')
+if vercel_url:
+    _append_unique(ALLOWED_HOSTS, vercel_url)
+    _append_unique(CSRF_TRUSTED_ORIGINS, f'https://{vercel_url}')
 
 
 # Application definition

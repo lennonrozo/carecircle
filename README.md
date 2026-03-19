@@ -265,6 +265,14 @@ Set environment variables in Vercel (Project Settings → Environment Variables)
 - `VOICE_TRANSCRIPTION_MODEL=small`
 - `VOICE_TRANSCRIPTION_ENABLED=true`
 
+For your current domain, set:
+
+- `DJANGO_ALLOWED_HOSTS=carecircle-eight.vercel.app`
+- `DJANGO_CSRF_TRUSTED_ORIGINS=https://carecircle-eight.vercel.app`
+
+`ALLOWED_HOSTS` is read in [config/settings.py](config/settings.py).
+This project also auto-adds Vercel's `VERCEL_URL` to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` as a fallback.
+
 After creating the Vercel project, create a Deploy Hook in Vercel and save its URL in GitHub as `VERCEL_DEPLOY_HOOK_URL`.
 
 ### Production checklist
