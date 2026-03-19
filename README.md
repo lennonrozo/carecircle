@@ -221,6 +221,41 @@ Important variables:
 
 This repository is ready for a standard Django deployment.
 
+## GitHub Actions CI/CD
+
+This repo includes GitHub Actions workflows in [.github/workflows/](.github/workflows):
+
+- [ci.yml](.github/workflows/ci.yml) — runs on pushes/PRs to `main`
+  - installs dependencies
+  - runs migrations
+  - runs `python manage.py test core`
+  - runs `python manage.py check --deploy`
+- [cd-deploy-hooks.yml](.github/workflows/cd-deploy-hooks.yml) — triggers deployments after CI succeeds on `main` (or manually)
+
+### CD secret configuration
+
+In GitHub repository settings (`Settings > Secrets and variables > Actions`), add one or both:
+
+- `VERCEL_DEPLOY_HOOK_URL`
+- `CLOUDFLARE_DEPLOY_HOOK_URL`
+
+If only one secret exists, only that provider is triggered. If both exist, both deployments are triggered from the same successful CI run.
+
+### Provider recommendation (free + commercial)
+
+For this Django app, choose **one primary deployment** for consistency.
+
+- **Recommended between the two options: Vercel** (if you must pick one of Vercel vs Cloudflare)
+  - simpler free-tier onboarding for app hosting workflows
+  - easier team handoff and preview flows
+- **Cloudflare** is excellent for DNS/CDN/WAF and edge delivery, but it is generally not the simplest primary host for a full Django app runtime.
+
+Practical setup:
+
+- Use one app host as primary (Vercel if constrained to these two)
+- Optionally place Cloudflare in front for DNS/WAF/CDN
+- Keep one canonical production URL to avoid split state and debugging complexity
+
 ### Production checklist
 
 1. Set real production environment variables

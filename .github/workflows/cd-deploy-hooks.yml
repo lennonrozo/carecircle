@@ -1,0 +1,41 @@
+name: CD Deploy Hooks
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  deploy-vercel:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Trigger Vercel deploy hook
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not set. Skipping Vercel deployment."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$VERCEL_DEPLOY_HOOK_URL"
+
+  deploy-cloudflare:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Trigger Cloudflare deploy hook
+        run: |
+          if [ -z "$CLOUDFLARE_DEPLOY_HOOK_URL" ]; then
+            echo "CLOUDFLARE_DEPLOY_HOOK_URL is not set. Skipping Cloudflare deployment."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$CLOUDFLARE_DEPLOY_HOOK_URL"
