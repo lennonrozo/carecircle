@@ -221,7 +221,7 @@ Important variables:
 
 This repository is ready for a standard Django deployment.
 
-## GitHub Actions CI/CD
+## GitHub Actions CI/CD (Vercel)
 
 This repo includes GitHub Actions workflows in [.github/workflows/](.github/workflows):
 
@@ -230,40 +230,48 @@ This repo includes GitHub Actions workflows in [.github/workflows/](.github/work
   - runs migrations
   - runs `python manage.py test core`
   - runs `python manage.py check --deploy`
-- [cd-deploy-hooks.yml](.github/workflows/cd-deploy-hooks.yml) — triggers deployments after CI succeeds on `main` (or manually)
+- [cd-deploy-hooks.yml](.github/workflows/cd-deploy-hooks.yml) — triggers a Vercel deployment after CI succeeds on `main` (or manually)
 
 ### CD secret configuration
 
-In GitHub repository settings (`Settings > Secrets and variables > Actions`), add one or both:
+In GitHub repository settings (`Settings > Secrets and variables > Actions`), add:
 
 - `VERCEL_DEPLOY_HOOK_URL`
-- `CLOUDFLARE_DEPLOY_HOOK_URL`
 
-If only one secret exists, only that provider is triggered. If both exist, both deployments are triggered from the same successful CI run.
+### Vercel project setup
 
-### Provider recommendation (free + commercial)
+This repo includes [vercel.json](vercel.json) and [scripts/vercel-build.sh](scripts/vercel-build.sh).
 
-For this Django app, choose **one primary deployment** for consistency.
+In Vercel, configure your project with:
 
-- **Recommended between the two options: Vercel** (if you must pick one of Vercel vs Cloudflare)
-  - simpler free-tier onboarding for app hosting workflows
-  - easier team handoff and preview flows
-- **Cloudflare** is excellent for DNS/CDN/WAF and edge delivery, but it is generally not the simplest primary host for a full Django app runtime.
+- **Framework Preset:** `Other`
+- **Build Command:** `bash scripts/vercel-build.sh`
+- **Output Directory:** leave empty
+- **Install Command:** default (`pip install -r requirements.txt` inferred from Python project)
 
-Practical setup:
+Set environment variables in Vercel (Project Settings → Environment Variables):
 
-- Use one app host as primary (Vercel if constrained to these two)
-- Optionally place Cloudflare in front for DNS/WAF/CDN
-- Keep one canonical production URL to avoid split state and debugging complexity
+- `DJANGO_DEBUG=false`
+- `DJANGO_SECRET_KEY=<strong-random-secret>`
+- `DATABASE_URL=<managed-postgres-url>`
+- `DJANGO_ALLOWED_HOSTS=<your-vercel-domain>,<custom-domain>`
+- `DJANGO_CSRF_TRUSTED_ORIGINS=https://<your-vercel-domain>,https://<custom-domain>`
+- `DJANGO_SECURE_SSL_REDIRECT=true`
+- `DJANGO_SECURE_HSTS_SECONDS=31536000`
+- `DJANGO_DB_SSL_REQUIRE=true`
+- `VOICE_TRANSCRIPTION_MODEL=small`
+- `VOICE_TRANSCRIPTION_ENABLED=true`
+
+After creating the Vercel project, create a Deploy Hook in Vercel and save its URL in GitHub as `VERCEL_DEPLOY_HOOK_URL`.
 
 ### Production checklist
 
 1. Set real production environment variables
 2. Point `DATABASE_URL` to PostgreSQL
-3. Run migrations
-4. Collect static files
-5. Run deploy checks
-6. Start Gunicorn behind HTTPS
+3. Run deploy checks
+4. Configure Vercel build command (`bash scripts/vercel-build.sh`)
+5. Add `VERCEL_DEPLOY_HOOK_URL` secret in GitHub
+6. Push to `main` and verify deployment succeeds
 
 ### Release script
 
