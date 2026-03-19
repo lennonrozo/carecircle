@@ -64,8 +64,11 @@ CSRF_TRUSTED_ORIGINS = _env_list(
 
 vercel_url = (os.getenv('VERCEL_URL') or '').strip().replace('https://', '').replace('http://', '').rstrip('/')
 if vercel_url:
+    # Allow the specific deployment URL
     _append_unique(ALLOWED_HOSTS, vercel_url)
     _append_unique(CSRF_TRUSTED_ORIGINS, f'https://{vercel_url}')
+    # Allow all *.vercel.app aliases Vercel generates (e.g. carecircle-seven, -eight, etc.)
+    _append_unique(ALLOWED_HOSTS, '.vercel.app')
 
 
 # Application definition
