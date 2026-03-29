@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 
 from datetime import timedelta
 
-from .models import Alert, Circle, CircleMembership, FeedEntry, Notification, VoiceLog
+from .models import Alert, Circle, CircleMembership, FeedEntry, MemberAvailability, Notification, Task, VoiceLog
 
 
 User = get_user_model()
@@ -179,6 +179,15 @@ class CircleRBACAPITests(TestCase):
 		owner_logged_in = self.client.login(username=self.owner.username, password='ownerpass123')
 		self.assertTrue(owner_logged_in)
 
+		member_membership = CircleMembership.objects.get(circle=self.circle, user=self.member)
+		now = timezone.now()
+		MemberAvailability.objects.create(
+			membership=member_membership,
+			available_from=now - timedelta(hours=1),
+			available_until=now + timedelta(hours=3),
+			notes='Test coverage window',
+		)
+
 		owner_dashboard_response = self.client.get('/dashboard/')
 		self.assertEqual(owner_dashboard_response.status_code, status.HTTP_200_OK)
 
@@ -192,7 +201,8 @@ class CircleRBACAPITests(TestCase):
 				'description': 'Owner can create tasks',
 				'task_type': 'logistics',
 				'urgency': 'medium',
-				'due_at': None,
+				'due_at': (now + timedelta(hours=1)).isoformat(),
+				'assigned_to': self.member.id,
 			},
 			format='json',
 		)
@@ -240,6 +250,182 @@ class CircleRBACAPITests(TestCase):
 		self.assertEqual(member_voice_post_response.status_code, status.HTTP_201_CREATED)
 
 		self.client.logout()
+
+
+class AdminTaskVoiceFlowTests(TestCase):
+	"""Temporary integration tests to catch admin flow regressions across task and voice features."""
+
+	def setUp(self):
+		self.client = APIClient()
+		self.owner = User.objects.create_user(
+			username='adminflow-owner',
+			email='adminflow-owner@example.com',
+			password='ownerpass123',
+		)
+		self.member = User.objects.create_user(
+			username='adminflow-member',
+			email='adminflow-member@example.com',
+			password='memberpass123',
+		)
+		self.other_member = User.objects.create_user(
+			username='adminflow-other',
+			email='adminflow-other@example.com',
+			password='memberpass123',
+		)
+
+		self.circle = Circle.objects.create(
+			name='Admin Flow Circle',
+			care_recipient='Flow Recipient',
+			created_by=self.owner,
+		)
+		self.owner_membership = CircleMembership.objects.create(
+			user=self.owner,
+			circle=self.circle,
+			role=CircleMembership.Role.OWNER,
+		)
+		self.member_membership = CircleMembership.objects.create(
+			user=self.member,
+			circle=self.circle,
+			role=CircleMembership.Role.MEMBER,
+		)
+		self.other_member_membership = CircleMembership.objects.create(
+			user=self.other_member,
+			circle=self.circle,
+			role=CircleMembership.Role.MEMBER,
+		)
+
+	def _add_window(self, membership, start, end, notes=''):
+		return MemberAvailability.objects.create(
+			membership=membership,
+			available_from=start,
+			available_until=end,
+			notes=notes,
+		)
+
+	def test_admin_login_full_flow_create_task_voice_claim_verify(self):
+		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
+
+		now = timezone.now()
+		due_at = now + timedelta(hours=2)
+		self._add_window(
+			self.member_membership,
+			start=now - timedelta(minutes=30),
+			end=now + timedelta(hours=4),
+			notes='Primary assignee',
+		)
+
+		task_response = self.client.post(
+			'/api/tasks/',
+			{
+				'title': 'Coordinate medication pickup',
+				'description': 'Pharmacy closes early',
+				'task_type': 'medical',
+				'urgency': 'high',
+				'due_at': due_at.isoformat(),
+				'assigned_to': self.member.id,
+			},
+			format='json',
+		)
+		self.assertEqual(task_response.status_code, status.HTTP_201_CREATED)
+		task_id = task_response.data['id']
+		self.assertEqual(task_response.data['assigned_to_id'], self.member.id)
+
+		voice_response = self.client.post(
+			'/api/voice-logs/',
+			{
+				'audio_label': 'Evening summary',
+				'transcript': 'Hydration is good and appetite improved today.',
+			},
+			format='json',
+		)
+		self.assertEqual(voice_response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(voice_response.data['status'], VoiceLog.Status.COMPLETED)
+		self.assertTrue(isinstance(voice_response.data['extracted_signals'], list))
+
+		self.client.logout()
+		self.assertTrue(self.client.login(username=self.member.username, password='memberpass123'))
+
+		claim_response = self.client.post(f'/api/tasks/{task_id}/claim/', {}, format='json')
+		self.assertEqual(claim_response.status_code, status.HTTP_200_OK)
+		self.assertEqual(claim_response.data['status'], Task.Status.CLAIMED)
+		self.assertEqual(claim_response.data['claimed_by_name'], self.member.username)
+
+		self.client.logout()
+		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
+		verify_response = self.client.post(f'/api/tasks/{task_id}/verify/', {}, format='json')
+		self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
+		self.assertEqual(verify_response.data['status'], Task.Status.VERIFIED)
+
+	def test_admin_cannot_create_task_without_any_available_member(self):
+		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
+
+		response = self.client.post(
+			'/api/tasks/',
+			{
+				'title': 'Should fail',
+				'description': 'No one is available right now',
+				'task_type': 'logistics',
+				'urgency': 'medium',
+				'assigned_to': self.member.id,
+			},
+			format='json',
+		)
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertIn('No members are currently available', response.data['detail'])
+
+	def test_admin_can_create_task_for_past_due_when_past_availability_matches(self):
+		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
+
+		now = timezone.now()
+		past_due = now - timedelta(days=1)
+		self._add_window(
+			self.member_membership,
+			start=past_due - timedelta(hours=1),
+			end=past_due + timedelta(hours=1),
+			notes='Past retrospective window',
+		)
+
+		response = self.client.post(
+			'/api/tasks/',
+			{
+				'title': 'Backfill task',
+				'description': 'Created for past due check',
+				'task_type': 'logistics',
+				'urgency': 'low',
+				'due_at': past_due.isoformat(),
+				'assigned_to': self.member.id,
+			},
+			format='json',
+		)
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+	def test_non_assigned_member_cannot_claim_open_task(self):
+		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
+		now = timezone.now()
+		self._add_window(
+			self.member_membership,
+			start=now - timedelta(minutes=10),
+			end=now + timedelta(hours=2),
+			notes='Assigned window',
+		)
+		task_response = self.client.post(
+			'/api/tasks/',
+			{
+				'title': 'Assigned task',
+				'description': 'Only assigned member should claim',
+				'task_type': 'emotional',
+				'urgency': 'medium',
+				'assigned_to': self.member.id,
+			},
+			format='json',
+		)
+		self.assertEqual(task_response.status_code, status.HTTP_201_CREATED)
+		task_id = task_response.data['id']
+		self.client.logout()
+
+		self.assertTrue(self.client.login(username=self.other_member.username, password='memberpass123'))
+		claim_response = self.client.post(f'/api/tasks/{task_id}/claim/', {}, format='json')
+		self.assertEqual(claim_response.status_code, status.HTTP_403_FORBIDDEN)
 
 	def test_health_endpoint_available_for_launch_checks(self):
 		response = self.client.get('/api/health/')

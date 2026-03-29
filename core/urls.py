@@ -31,6 +31,7 @@ from .views import (
     profile_page,
     tasks_page,
 )
+from .views import AvailableMembersAPIView, MemberAvailabilityAPIView, MemberAvailabilityDeleteAPIView
 
 urlpatterns = [
     path('', landing_page, name='landing-page'),
@@ -58,8 +59,12 @@ urlpatterns = [
     path('api/notifications/<int:notification_id>/read/', NotificationMarkReadAPIView.as_view(), name='api-notification-read'),
     path('api/circles/', CircleListCreateAPIView.as_view(), name='api-circles-list-create'),
     path('api/circles/<int:circle_id>/', CircleDetailAPIView.as_view(), name='api-circles-detail'),
+    # 'available/' must come before '<int:user_id>/' to avoid integer-capture conflict
+    path('api/circles/<int:circle_id>/members/available/', AvailableMembersAPIView.as_view(), name='api-members-available'),
     path('api/circles/<int:circle_id>/members/', CircleMemberListAPIView.as_view(), name='api-circles-members-list'),
     path('api/circles/<int:circle_id>/members/invite/', CircleMemberInviteAPIView.as_view(), name='api-circles-members-invite'),
     path('api/circles/<int:circle_id>/members/<int:user_id>/', CircleMemberDeleteAPIView.as_view(), name='api-circles-members-delete'),
+    path('api/circles/<int:circle_id>/members/<int:user_id>/availability/', MemberAvailabilityAPIView.as_view(), name='api-member-availability'),
+    path('api/circles/<int:circle_id>/members/<int:user_id>/availability/<int:avail_id>/', MemberAvailabilityDeleteAPIView.as_view(), name='api-member-availability-delete'),
     path('api/circles/<int:circle_id>/notifications/', CircleNotificationSendAPIView.as_view(), name='api-circles-notifications'),
 ]

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Alert, Circle, CircleMembership, FeedEntry, Notification, Task, VoiceLog
+from .models import Alert, Circle, CircleMembership, FeedEntry, MemberAvailability, Notification, Task, VoiceLog
 
 
 User = get_user_model()
@@ -31,14 +31,28 @@ class CircleDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
 
+class MemberAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberAvailability
+        fields = ['id', 'available_from', 'available_until', 'notes', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate(self, data):
+        if data.get('available_from') and data.get('available_until'):
+            if data['available_from'] >= data['available_until']:
+                raise serializers.ValidationError('available_until must be after available_from.')
+        return data
+
+
 class CircleMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source='user.id', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     full_name = serializers.SerializerMethodField()
+    availabilities = MemberAvailabilitySerializer(many=True, read_only=True)
 
     class Meta:
         model = CircleMembership
-        fields = ['user_id', 'email', 'full_name', 'role', 'joined_at']
+        fields = ['user_id', 'email', 'full_name', 'role', 'joined_at', 'availabilities']
 
     def get_full_name(self, obj):
         full_name = obj.user.get_full_name()
@@ -57,6 +71,10 @@ class CircleInviteSerializer(serializers.Serializer):
             user = User.objects.get(email__iexact=value)
         except User.DoesNotExist as exc:
             raise serializers.ValidationError('No user exists with this email.') from exc
+        if CircleMembership.objects.filter(user=user).exists():
+            raise serializers.ValidationError(
+                'This user already belongs to a circle and cannot be added to another.'
+            )
         self.context['invite_user'] = user
         return value
 
@@ -157,6 +175,8 @@ class TaskSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     claimed_by_name = serializers.SerializerMethodField()
     verified_by_name = serializers.SerializerMethodField()
+    assigned_to_id = serializers.IntegerField(source='assigned_to.id', read_only=True, allow_null=True, default=None)
+    assigned_to_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -170,6 +190,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'due_at',
             'circle_name',
             'created_by_name',
+            'assigned_to_id',
+            'assigned_to_name',
             'claimed_by_name',
             'verified_by_name',
             'claimed_at',
@@ -182,6 +204,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'id',
             'circle_name',
             'created_by_name',
+            'assigned_to_id',
+            'assigned_to_name',
             'claimed_by_name',
             'verified_by_name',
             'claimed_at',
@@ -205,11 +229,20 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_verified_by_name(self, obj):
         return self._display_name(obj.verified_by)
 
+    def get_assigned_to_name(self, obj):
+        return self._display_name(obj.assigned_to)
+
 
 class TaskCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'task_type', 'urgency', 'due_at']
+        fields = ['title', 'description', 'task_type', 'urgency', 'due_at', 'assigned_to']
+
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        allow_null=True,
+        required=False,
+    )
 
 
 class FeedEntrySerializer(serializers.ModelSerializer):

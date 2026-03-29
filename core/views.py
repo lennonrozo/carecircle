@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from datetime import timedelta
 from collections import Counter
 
-from .models import Alert, Circle, CircleMembership, FeedEntry, Notification, Task, VoiceLog
+from .models import Alert, Circle, CircleMembership, FeedEntry, MemberAvailability, Notification, Task, VoiceLog
 from .insights import build_characteristic_trends
 from .permissions import IsCircleMember, IsCircleOwner
 from .services import extract_signals_from_transcript, process_voice_log
@@ -36,6 +36,7 @@ from .serializers import (
 	UserProfileSerializer,
 	NotificationListSerializer,
 )
+from .serializers import MemberAvailabilitySerializer
 
 
 User = get_user_model()
@@ -113,6 +114,23 @@ def get_initials(name):
 	if len(parts) == 1:
 		return parts[0][0].upper()
 	return f'{parts[0][0]}{parts[-1][0]}'.upper()
+
+
+def get_available_members_now(circle, at_time=None):
+	"""Return memberships (members only) that have an active availability window at at_time."""
+	if at_time is None:
+		at_time = timezone.now()
+	return (
+		CircleMembership.objects.filter(
+			circle=circle,
+			role=CircleMembership.Role.MEMBER,
+			availabilities__available_from__lte=at_time,
+			availabilities__available_until__gte=at_time,
+		)
+		.select_related('user')
+		.prefetch_related('availabilities')
+		.distinct()
+	)
 
 
 def cleanup_expired_task_claims(circle):
@@ -681,13 +699,14 @@ class TaskListCreateAPIView(APIView):
 			return Response({'tasks': [], 'user_role': 'admin', 'can_manage': True})
 
 		cleanup_expired_task_claims(circle)
-		tasks = Task.objects.filter(circle=circle).select_related('claimed_by', 'verified_by', 'created_by')
+		tasks = Task.objects.filter(circle=circle).select_related('claimed_by', 'verified_by', 'created_by', 'assigned_to')
 		serializer = TaskSerializer(tasks, many=True)
 		user_role = 'admin' if membership_role == CircleMembership.Role.OWNER else 'member'
 		can_manage = membership_role == CircleMembership.Role.OWNER
 		data = []
 		for item, task in zip(serializer.data, tasks):
-			item['can_claim'] = task.status == Task.Status.OPEN
+			can_claim_assigned = actor is not None and task.assigned_to_id == actor.id
+			item['can_claim'] = task.status == Task.Status.OPEN and (can_manage or can_claim_assigned)
 			item['can_release'] = task.status == Task.Status.CLAIMED and (
 				can_manage or (actor is not None and task.claimed_by_id == actor.id)
 			)
@@ -704,8 +723,52 @@ class TaskListCreateAPIView(APIView):
 		if membership_role != CircleMembership.Role.OWNER:
 			raise PermissionDenied('Only admins can create tasks.')
 
+		# Availability gate: determine check time (task due_at or now)
+		from django.utils.dateparse import parse_datetime as _parse_dt
+		at_time = timezone.now()
+		due_at_raw = request.data.get('due_at')
+		if due_at_raw:
+			parsed_due = _parse_dt(str(due_at_raw))
+			if parsed_due:
+				at_time = parsed_due
+
+		available_qs = get_available_members_now(circle, at_time)
+		if not available_qs.exists():
+			return Response(
+				{
+					'detail': (
+						'No members are currently available. '
+						'Please set member availability before creating a task.'
+					)
+				},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
 		serializer = TaskCreateUpdateSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
+
+		# Validate assigned_to is required and belongs to this circle.
+		assigned_to = serializer.validated_data.get('assigned_to')
+		if assigned_to is None:
+			return Response(
+				{'detail': 'You must assign this task to an available member.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if not CircleMembership.objects.filter(
+			circle=circle,
+			user=assigned_to,
+			role=CircleMembership.Role.MEMBER,
+		).exists():
+			return Response(
+				{'detail': 'The assigned member does not belong to this circle.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if not available_qs.filter(user=assigned_to).exists():
+			return Response(
+				{'detail': 'The selected member is not available at this time.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
 		task = serializer.save(circle=circle, created_by=actor)
 		return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
 
@@ -745,6 +808,12 @@ class TaskActionAPIView(APIView):
 		if action == 'claim':
 			if task.status != Task.Status.OPEN:
 				return Response({'detail': 'Only open tasks can be claimed.'}, status=status.HTTP_400_BAD_REQUEST)
+			if (
+				membership_role != CircleMembership.Role.OWNER
+				and task.assigned_to_id is not None
+				and (actor is None or task.assigned_to_id != actor.id)
+			):
+				raise PermissionDenied('Only the assigned member or an admin can claim this task.')
 			task.status = Task.Status.CLAIMED
 			task.claimed_by = actor
 			task.claimed_at = now
@@ -848,6 +917,11 @@ class CircleListCreateAPIView(generics.ListCreateAPIView):
 		return Response(serializer.data)
 
 	def perform_create(self, serializer):
+		if CircleMembership.objects.filter(user=self.request.user).exists():
+			from rest_framework.exceptions import ValidationError
+			raise ValidationError(
+				'You already belong to a circle. Each user can only be a member of one circle.'
+			)
 		circle = serializer.save(created_by=self.request.user)
 		CircleMembership.objects.create(
 			circle=circle,
@@ -876,7 +950,11 @@ class CircleMemberListAPIView(generics.ListAPIView):
 	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
 
 	def get_queryset(self):
-		return CircleMembership.objects.filter(circle_id=self.kwargs['circle_id']).select_related('user')
+		return (
+			CircleMembership.objects.filter(circle_id=self.kwargs['circle_id'])
+			.select_related('user')
+			.prefetch_related('availabilities')
+		)
 
 
 class CircleMemberInviteAPIView(APIView):
@@ -903,6 +981,59 @@ class CircleMemberInviteAPIView(APIView):
 			)
 
 		return Response(CircleMemberSerializer(membership).data, status=status.HTTP_201_CREATED)
+
+
+class MemberAvailabilityAPIView(APIView):
+	"""GET/POST availability windows for a specific circle member (admin only)."""
+	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+
+	def get(self, request, circle_id, user_id):
+		membership = generics.get_object_or_404(
+			CircleMembership, circle_id=circle_id, user_id=user_id
+		)
+		serializer = MemberAvailabilitySerializer(membership.availabilities.all(), many=True)
+		return Response(serializer.data)
+
+	def post(self, request, circle_id, user_id):
+		membership = generics.get_object_or_404(
+			CircleMembership, circle_id=circle_id, user_id=user_id
+		)
+		serializer = MemberAvailabilitySerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		availability = serializer.save(membership=membership)
+		return Response(MemberAvailabilitySerializer(availability).data, status=status.HTTP_201_CREATED)
+
+
+class MemberAvailabilityDeleteAPIView(APIView):
+	"""DELETE a specific availability window (admin only)."""
+	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+
+	def delete(self, request, circle_id, user_id, avail_id):
+		membership = generics.get_object_or_404(
+			CircleMembership, circle_id=circle_id, user_id=user_id
+		)
+		avail = generics.get_object_or_404(
+			MemberAvailability, id=avail_id, membership=membership
+		)
+		avail.delete()
+		return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AvailableMembersAPIView(APIView):
+	"""Returns circle members who are available at a given time (default: now)."""
+	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+
+	def get(self, request, circle_id):
+		circle = generics.get_object_or_404(Circle, pk=circle_id)
+		from django.utils.dateparse import parse_datetime as _parse_dt
+		at_time = timezone.now()
+		at_str = request.query_params.get('at')
+		if at_str:
+			parsed = _parse_dt(at_str)
+			if parsed:
+				at_time = parsed
+		memberships = get_available_members_now(circle, at_time)
+		return Response(CircleMemberSerializer(memberships, many=True).data)
 
 
 class CircleMemberDeleteAPIView(APIView):

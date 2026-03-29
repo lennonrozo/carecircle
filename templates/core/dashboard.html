@@ -426,6 +426,15 @@
             <input type="datetime-local" class="form-input" id="task-due-input" />
           </div>
         </div>
+        <div class="form-group" id="task-assign-group">
+          <label class="form-label">Assign To</label>
+          <select class="form-select" id="task-assignee-input">
+            <option value="">Loading available members…</option>
+          </select>
+          <div id="task-assign-warning" style="margin-top:6px;font-size:12px;color:#C67D5A;display:none;">
+            No members are currently available. Set member availability first.
+          </div>
+        </div>
         <div class="modal-actions">
           <button type="button" class="claim-btn" onclick="closeTaskModal()">Cancel</button>
           <button type="submit" class="btn-new" style="padding:10px 18px;">Save Task</button>
@@ -802,6 +811,7 @@ function taskCardMarkup(task) {
         <div class="urgency-dot ${getUrgencyClass(task.urgency)}"></div>
         <div class="task-due">${formatDueLabel(task.due_at, task.status)}</div>
       </div>
+      ${task.assigned_to_name ? `<div class="task-note">Assigned to ${task.assigned_to_name}</div>` : ''}
       ${task.description ? `<div class="task-note">${task.description}</div>` : ''}
       ${task.status === 'claimed' ? `<div class="claimer"><div class="claimer-dot">${(task.claimed_by_name || '?').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()}</div><div class="claimer-name">Claimed by ${task.claimed_by_name || 'Caregiver'} · expires in ${timeUntil(task.claimed_expires_at)}</div></div>` : ''}
       ${task.status === 'verified' && task.verified_by_name ? `<div class="task-note">Verified by ${task.verified_by_name}</div>` : ''}
@@ -1111,6 +1121,8 @@ function openTaskModal(taskId = null) {
   if (taskId === null) {
     title.textContent = 'New Task';
     document.getElementById('task-form').reset();
+    document.getElementById('task-assign-group').style.display = '';
+    loadAvailableMembers();
   } else {
     title.textContent = 'Edit Task';
     const currentTask = taskBoardItems.find(task => task.id === taskId);
@@ -1120,6 +1132,7 @@ function openTaskModal(taskId = null) {
     document.getElementById('task-type-input').value = currentTask.task_type;
     document.getElementById('task-urgency-input').value = currentTask.urgency;
     document.getElementById('task-due-input').value = currentTask.due_at ? new Date(currentTask.due_at).toISOString().slice(0, 16) : '';
+    document.getElementById('task-assign-group').style.display = 'none';
   }
   modal.classList.add('open');
 }
@@ -1127,6 +1140,10 @@ function openTaskModal(taskId = null) {
 function closeTaskModal() {
   editingTaskId = null;
   document.getElementById('task-modal').classList.remove('open');
+  const saveBtn = document.querySelector('#task-form .btn-new');
+  if (saveBtn) saveBtn.disabled = false;
+  document.getElementById('task-assign-warning').style.display = 'none';
+  document.getElementById('task-assign-group').style.display = '';
 }
 
 async function saveTask(event) {
@@ -1138,6 +1155,14 @@ async function saveTask(event) {
     urgency: document.getElementById('task-urgency-input').value,
     due_at: document.getElementById('task-due-input').value ? new Date(document.getElementById('task-due-input').value).toISOString() : null,
   };
+  if (!editingTaskId) {
+    const assigneeVal = document.getElementById('task-assignee-input').value;
+    if (!assigneeVal) {
+      alert('Select an available member before creating a task.');
+      return;
+    }
+    payload.assigned_to = parseInt(assigneeVal);
+  }
   const url = editingTaskId ? `/api/tasks/${editingTaskId}/` : '/api/tasks/';
   const method = editingTaskId ? 'PATCH' : 'POST';
 
@@ -1155,6 +1180,34 @@ async function saveTask(event) {
   tasksLoaded = false;
   loadTasksData();
   loadDashboardData();
+}
+
+async function loadAvailableMembers() {
+  if (!activeCircleId) return;
+  const sel = document.getElementById('task-assignee-input');
+  const warning = document.getElementById('task-assign-warning');
+  const saveBtn = document.querySelector('#task-form .btn-new');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  warning.style.display = 'none';
+  try {
+    const dueVal = document.getElementById('task-due-input').value;
+    const atParam = dueVal ? `?at=${encodeURIComponent(new Date(dueVal).toISOString())}` : '';
+    const r = await fetch(`/api/circles/${activeCircleId}/members/available/${atParam}`);
+    if (!r.ok) throw new Error();
+    const members = await r.json();
+    if (members.length === 0) {
+      sel.innerHTML = '<option value="">— no one available —</option>';
+      warning.style.display = 'block';
+      if (saveBtn) saveBtn.disabled = true;
+    } else {
+      sel.innerHTML = '<option value="">Select a member…</option>' +
+        members.map(m => `<option value="${m.user_id}">${m.full_name}</option>`).join('');
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  } catch {
+    sel.innerHTML = '<option value="">Failed to load members</option>';
+    if (saveBtn) saveBtn.disabled = true;
+  }
 }
 
 async function taskAction(taskId, action) {
@@ -1521,6 +1574,9 @@ function toggleRecording() {
 openInitialPage();
 loadDashboardData();
 document.getElementById('task-form').addEventListener('submit', saveTask);
+document.getElementById('task-due-input').addEventListener('change', () => {
+  if (!editingTaskId) loadAvailableMembers();
+});
 </script>
 </body>
 </html>

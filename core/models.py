@@ -49,6 +49,27 @@ class CircleMembership(models.Model):
 		return f'{self.user} in {self.circle} ({self.role})'
 
 
+class MemberAvailability(models.Model):
+	"""
+	A date/time window during which a circle member is available to be assigned tasks.
+	"""
+	membership = models.ForeignKey(
+		CircleMembership,
+		on_delete=models.CASCADE,
+		related_name='availabilities',
+	)
+	available_from = models.DateTimeField()
+	available_until = models.DateTimeField()
+	notes = models.CharField(max_length=255, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['available_from']
+
+	def __str__(self):
+		return f'{self.membership.user} available {self.available_from} – {self.available_until}'
+
+
 class Notification(models.Model):
 	circle = models.ForeignKey(
 		Circle,
@@ -165,6 +186,13 @@ class Task(models.Model):
 	urgency = models.CharField(max_length=20, choices=Urgency.choices, default=Urgency.MEDIUM)
 	status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
 	due_at = models.DateTimeField(null=True, blank=True)
+	assigned_to = models.ForeignKey(
+		User,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='assigned_tasks',
+	)
 	claimed_by = models.ForeignKey(
 		User,
 		on_delete=models.SET_NULL,
