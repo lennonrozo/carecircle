@@ -59,7 +59,12 @@ default_hosts = ['127.0.0.1', 'localhost', 'testserver']
 ALLOWED_HOSTS = _env_list('DJANGO_ALLOWED_HOSTS', ','.join(default_hosts))
 CSRF_TRUSTED_ORIGINS = _env_list(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
-    'http://127.0.0.1:8000,http://localhost:8000,http://127.0.0.1:8002,http://localhost:8002',
+    (
+        'http://127.0.0.1,http://localhost,'
+        'http://127.0.0.1:8000,http://localhost:8000,'
+        'http://127.0.0.1:8002,http://localhost:8002,'
+        'https://*.vercel.app'
+    ),
 )
 
 vercel_url = (os.getenv('VERCEL_URL') or '').strip().replace('https://', '').replace('http://', '').rstrip('/')

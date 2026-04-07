@@ -26,15 +26,6 @@ from django.conf import settings
 
 
 def transcribe_audio_file(audio_path):
-    """
-    Transcribe an audio file using faster-whisper.
-
-    Returns:
-        (transcript: str | None, error: str | None)
-
-    On success: (transcript_text, None)
-    On failure: (None, error_message) — caller decides how to handle.
-    """
     if not audio_path:
         return None, 'No audio file path provided.'
 

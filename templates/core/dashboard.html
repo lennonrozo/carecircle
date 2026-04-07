@@ -285,6 +285,7 @@
       <button class="tab" onclick="showPage('feed', this)">Feed</button>
       <button class="tab" onclick="showPage('voice', this)">Voice Logs</button>
       <button class="tab" onclick="showPage('insights', this)">Insights</button>
+      <button class="tab" onclick="showPage('availability', this)">Manage Availability</button>
     </div>
     <div class="nav-right">
       <a href="/notifications/" class="nav-icon" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center;">
@@ -368,7 +369,7 @@
     <div class="kanban">
       <div class="kanban-col col-open">
         <div class="kanban-head">
-          <div class="kanban-title">Open</div>
+          <div class="kanban-title">Assigned</div>
           <div class="kanban-count" id="count-open">0</div>
         </div>
         <div class="kanban-body" id="tasks-open"></div>
@@ -384,7 +385,7 @@
 
       <div class="kanban-col col-verified">
         <div class="kanban-head">
-          <div class="kanban-title">Verified</div>
+          <div class="kanban-title">Fulfilled</div>
           <div class="kanban-count" id="count-verified">0</div>
         </div>
         <div class="kanban-body" id="tasks-verified"></div>
@@ -622,10 +623,52 @@
       <div style="font-size:12px;color:var(--muted);padding:0 2px;">Insights are assistive and non-diagnostic. Use them to guide observation and care-team coordination.</div>
     </div>
   </div>
+
+  <!-- MANAGE AVAILABILITY -->
+  <div class="page" id="page-availability">
+    <div class="tasks-header">
+      <div>
+        <div class="welcome-sub">Set your schedule for task assignment</div>
+        <div class="page-title">Manage Availability</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start;">
+      <div class="record-card" style="padding:16px;">
+        <div class="section-label">Your active windows</div>
+        <div id="availability-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+          <div style="font-size:13px;color:var(--muted);">Loading availability windows...</div>
+        </div>
+      </div>
+
+      <div class="record-card" style="padding:16px;">
+        <div class="section-label">Add availability window</div>
+        <form id="availability-form">
+          <div class="form-group">
+            <label class="form-label">Available From</label>
+            <input type="datetime-local" class="form-input" id="availability-from" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Available Until</label>
+            <input type="datetime-local" class="form-input" id="availability-until" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes (optional)</label>
+            <input class="form-input" id="availability-notes" placeholder="e.g. weekdays after 5pm" />
+          </div>
+          <div id="availability-form-status" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+          <div class="modal-actions" style="justify-content:flex-start;">
+            <button type="submit" class="btn-new" style="padding:10px 16px;">Save Availability</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 let activeCircleId = null;
+let activeUserId = null;
 const initialPage = '{{ initial_page|default:"dashboard" }}';
 let tasksLoaded = false;
 let tasksCanManage = false;
@@ -635,9 +678,32 @@ let feedLoaded = false;
 let voiceLoaded = false;
 let insightsLoaded = false;
 let voicePollTimer = null;
+let liveSyncTimer = null;
+let liveSyncSnapshot = null;
 let voiceBlob = null;
 let voiceMediaRecorder = null;
 let voiceAudioChunks = [];
+
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${name}=`));
+  return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : null;
+}
+
+function apiFetch(url, options = {}) {
+  const opts = { credentials: 'same-origin', ...options };
+  const method = (opts.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+    const csrfToken = getCookie('csrftoken');
+    opts.headers = { ...(opts.headers || {}) };
+    if (csrfToken) {
+      opts.headers['X-CSRFToken'] = csrfToken;
+    }
+  }
+  return fetch(url, opts);
+}
 
 function showPage(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -648,6 +714,12 @@ function showPage(id, el) {
   if (id === 'feed') loadFeedData();
   if (id === 'voice') loadVoiceData();
   if (id === 'insights') loadInsightsData();
+  if (id === 'availability') loadMyAvailability();
+}
+
+function isPageActive(id) {
+  const page = document.getElementById(`page-${id}`);
+  return !!page && page.classList.contains('active');
 }
 
 function goToCircleMembers() {
@@ -663,6 +735,7 @@ function openInitialPage() {
     feed: 2,
     voice: 3,
     insights: 4,
+    availability: 5,
   };
   const requestedPage = tabMap[queryTab] !== undefined ? queryTab : initialPage;
   const tabs = document.querySelectorAll('.tab');
@@ -758,6 +831,7 @@ function renderRecentActivity(items) {
 
 function applyCircleEmptyState(messageTitle, messageSub, chipText) {
   activeCircleId = null;
+  liveSyncSnapshot = null;
   document.getElementById('dashboard-circle-chip').textContent = chipText;
 
   const circleAvatar = document.getElementById('circle-avatar');
@@ -782,10 +856,10 @@ function applyCircleEmptyState(messageTitle, messageSub, chipText) {
 }
 
 function formatDueLabel(value, status) {
-  if (!value) return status === 'verified' ? 'Completed' : 'No due date';
+  if (!value) return status === 'verified' ? 'Fulfilled' : 'No due date';
   const date = new Date(value);
   const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  if (status === 'verified') return `Completed · ${label}`;
+  if (status === 'verified') return `Fulfilled · ${label}`;
   return `Due ${label}`;
 }
 
@@ -797,7 +871,7 @@ function taskCardMarkup(task) {
   const actions = [];
   if (task.can_claim) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'claim')">Claim task</button>`);
   if (task.can_release) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'release')">Release</button>`);
-  if (task.can_verify) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'verify')">Verify</button>`);
+  if (task.can_verify) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();taskAction(${task.id}, 'verify')">Fulfill</button>`);
   if (task.can_edit) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();openTaskModal(${task.id})">Edit</button>`);
   if (task.can_delete) actions.push(`<button class="claim-btn" onclick="event.stopPropagation();deleteTask(${task.id})">Delete</button>`);
 
@@ -814,7 +888,7 @@ function taskCardMarkup(task) {
       ${task.assigned_to_name ? `<div class="task-note">Assigned to ${task.assigned_to_name}</div>` : ''}
       ${task.description ? `<div class="task-note">${task.description}</div>` : ''}
       ${task.status === 'claimed' ? `<div class="claimer"><div class="claimer-dot">${(task.claimed_by_name || '?').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()}</div><div class="claimer-name">Claimed by ${task.claimed_by_name || 'Caregiver'} · expires in ${timeUntil(task.claimed_expires_at)}</div></div>` : ''}
-      ${task.status === 'verified' && task.verified_by_name ? `<div class="task-note">Verified by ${task.verified_by_name}</div>` : ''}
+      ${task.status === 'verified' && task.verified_by_name ? `<div class="task-note">Fulfilled by ${task.verified_by_name}</div>` : ''}
       ${actions.length ? `<div class="task-actions">${actions.join('')}</div>` : ''}
     </div>
   `;
@@ -835,18 +909,18 @@ function renderTasksBoard(payload) {
   tasksCanManage = !!payload.can_manage;
   document.getElementById('new-task-button').style.display = tasksCanManage ? 'flex' : 'none';
 
-  const openTasks = tasks.filter(task => task.status === 'open');
+  const openTasks = tasks.filter(task => task.status === 'open' && task.assigned_to_id === activeUserId);
   const claimedTasks = tasks.filter(task => task.status === 'claimed');
-  const verifiedTasks = tasks.filter(task => task.status === 'verified');
+  const fulfilledTasks = tasks.filter(task => task.status === 'verified');
 
   document.getElementById('count-open').textContent = openTasks.length;
   document.getElementById('count-claimed').textContent = claimedTasks.length;
-  document.getElementById('count-verified').textContent = verifiedTasks.length;
+  document.getElementById('count-verified').textContent = fulfilledTasks.length;
   document.getElementById('tasks-subtitle').textContent = activeCircleId ? 'Live coordination for your care circle' : 'Care circle tasks';
 
   renderTaskColumn('tasks-open', openTasks);
   renderTaskColumn('tasks-claimed', claimedTasks);
-  renderTaskColumn('tasks-verified', verifiedTasks);
+  renderTaskColumn('tasks-verified', fulfilledTasks);
 }
 
 function feedTagClass(source) {
@@ -943,8 +1017,8 @@ async function updateFeedWeeklySummary() {
   }
 }
 
-async function loadFeedData() {
-  if (feedLoaded) return;
+async function loadFeedData(force = false) {
+  if (feedLoaded && !force) return;
   try {
     const response = await fetch('/api/feed/');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -968,7 +1042,7 @@ async function postFeedEntry() {
   const value = textArea.value.trim();
   if (!value) return;
 
-  const response = await fetch('/api/feed/', {
+  const response = await apiFetch('/api/feed/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title: '', content: value, tags: [] }),
@@ -1099,8 +1173,9 @@ async function loadInsightsData(force = false) {
   }
 }
 
-async function loadTasksData() {
-  if (!activeCircleId && tasksLoaded) return;
+async function loadTasksData(force = false) {
+  if (!activeCircleId && tasksLoaded && !force) return;
+  if (tasksLoaded && !force) return;
   try {
     const response = await fetch('/api/tasks/');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1112,6 +1187,81 @@ async function loadTasksData() {
     document.getElementById('tasks-claimed').innerHTML = '<div class="task-empty">Failed to load tasks.</div>';
     document.getElementById('tasks-verified').innerHTML = '<div class="task-empty">Failed to load tasks.</div>';
   }
+}
+
+function buildLiveSnapshotSignature(snapshot) {
+  const safeSnapshot = snapshot || {};
+  return JSON.stringify({
+    tasks: safeSnapshot.tasks || {},
+    feed: safeSnapshot.feed || {},
+    voice: safeSnapshot.voice || {},
+    alerts: safeSnapshot.alerts || {},
+    activity: safeSnapshot.activity || {},
+  });
+}
+
+async function pollLiveSync() {
+  if (!activeCircleId) return;
+
+  try {
+    const response = await fetch('/api/live-sync/');
+    if (!response.ok) return;
+    const snapshot = await response.json();
+    const signature = buildLiveSnapshotSignature(snapshot);
+
+    if (!liveSyncSnapshot) {
+      liveSyncSnapshot = signature;
+      return;
+    }
+
+    if (signature === liveSyncSnapshot) return;
+
+    const previous = JSON.parse(liveSyncSnapshot);
+    const next = snapshot;
+    liveSyncSnapshot = signature;
+
+    const tasksChanged = JSON.stringify(previous.tasks || {}) !== JSON.stringify(next.tasks || {});
+    const feedChanged = JSON.stringify(previous.feed || {}) !== JSON.stringify(next.feed || {});
+    const voiceChanged = JSON.stringify(previous.voice || {}) !== JSON.stringify(next.voice || {});
+    const alertsChanged = JSON.stringify(previous.alerts || {}) !== JSON.stringify(next.alerts || {});
+    const activityChanged = JSON.stringify(previous.activity || {}) !== JSON.stringify(next.activity || {});
+
+    if (tasksChanged) {
+      tasksLoaded = false;
+      if (isPageActive('tasks')) loadTasksData(true);
+    }
+
+    if (feedChanged) {
+      feedLoaded = false;
+      if (isPageActive('feed')) loadFeedData(true);
+    }
+
+    if (voiceChanged) {
+      voiceLoaded = false;
+      if (isPageActive('voice')) loadVoiceData(true);
+    }
+
+    if (tasksChanged || voiceChanged || alertsChanged || activityChanged) {
+      loadDashboardData();
+    }
+
+    if ((tasksChanged || voiceChanged || alertsChanged) && isPageActive('feed')) {
+      updateFeedWeeklySummary();
+    }
+
+    if ((tasksChanged || feedChanged || voiceChanged || alertsChanged) && (insightsLoaded || isPageActive('insights'))) {
+      insightsLoaded = false;
+      loadInsightsData(true);
+    }
+  } catch {
+    // Ignore transient sync errors; next tick will retry.
+  }
+}
+
+function startLiveSync() {
+  if (liveSyncTimer) return;
+  pollLiveSync();
+  liveSyncTimer = setInterval(pollLiveSync, 2500);
 }
 
 function openTaskModal(taskId = null) {
@@ -1166,7 +1316,7 @@ async function saveTask(event) {
   const url = editingTaskId ? `/api/tasks/${editingTaskId}/` : '/api/tasks/';
   const method = editingTaskId ? 'PATCH' : 'POST';
 
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1211,7 +1361,7 @@ async function loadAvailableMembers() {
 }
 
 async function taskAction(taskId, action) {
-  const response = await fetch(`/api/tasks/${taskId}/${action}/`, { method: 'POST' });
+  const response = await apiFetch(`/api/tasks/${taskId}/${action}/`, { method: 'POST' });
   if (!response.ok) {
     const data = await response.json();
     alert(data.detail || 'Unable to update task.');
@@ -1224,7 +1374,7 @@ async function taskAction(taskId, action) {
 
 async function deleteTask(taskId) {
   if (!confirm('Delete this task?')) return;
-  const response = await fetch(`/api/tasks/${taskId}/`, { method: 'DELETE' });
+  const response = await apiFetch(`/api/tasks/${taskId}/`, { method: 'DELETE' });
   if (!response.ok) {
     const data = await response.json();
     alert(data.detail || 'Unable to delete task.');
@@ -1246,6 +1396,7 @@ async function loadDashboardData() {
     const circle = data.circle;
     const isAdmin = (data.user_role || 'member') === 'admin';
     const adminCirclePanel = document.getElementById('admin-circle-panel');
+    activeUserId = data.viewer_id || null;
 
     document.getElementById('dashboard-viewer-name').textContent = `${data.viewer_name || 'Caregiver'}.`;
     document.getElementById('dashboard-role-badge').textContent = data.user_role || 'member';
@@ -1267,6 +1418,9 @@ async function loadDashboardData() {
       return;
     }
 
+    if (activeCircleId !== circle.id) {
+      liveSyncSnapshot = null;
+    }
     activeCircleId = circle.id;
     const viewCircleButton = document.getElementById('view-circle-button');
     if (viewCircleButton) {
@@ -1289,6 +1443,9 @@ async function loadDashboardData() {
       tasksLoaded = false;
       loadTasksData();
     }
+    if (initialPage === 'availability' || document.getElementById('page-availability').classList.contains('active')) {
+      loadMyAvailability();
+    }
   } catch (error) {
     applyCircleEmptyState(
       'Circle unavailable right now',
@@ -1296,6 +1453,105 @@ async function loadDashboardData() {
       'Circle unavailable'
     );
     document.getElementById('recent-activity').innerHTML = '<div style="padding:18px;color:var(--warm);font-size:13px;">Failed to load dashboard data.</div>';
+  }
+}
+
+function renderAvailabilityList(items) {
+  const container = document.getElementById('availability-list');
+  if (!items.length) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No availability windows yet.</div>';
+    return;
+  }
+  container.innerHTML = items.map(item => {
+    const from = new Date(item.available_from).toLocaleString();
+    const until = new Date(item.available_until).toLocaleString();
+    return `
+      <div style="background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <div style="font-size:13px;color:var(--navy);font-weight:600;">${from} → ${until}</div>
+            ${item.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">${item.notes}</div>` : ''}
+          </div>
+          <button class="claim-btn" onclick="deleteMyAvailability(${item.id})" style="margin-top:0;">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadMyAvailability() {
+  const container = document.getElementById('availability-list');
+  if (!container) return;
+  if (!activeCircleId || !activeUserId) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--warm);">Sign in and join a circle to manage availability.</div>';
+    return;
+  }
+  container.innerHTML = '<div style="font-size:13px;color:var(--muted);">Loading availability windows...</div>';
+  try {
+    const response = await apiFetch(`/api/circles/${activeCircleId}/members/${activeUserId}/availability/`);
+    if (!response.ok) {
+      const payload = await response.json();
+      throw new Error(payload.detail || `HTTP ${response.status}`);
+    }
+    const items = await response.json();
+    renderAvailabilityList(Array.isArray(items) ? items : []);
+  } catch (error) {
+    container.innerHTML = `<div style="font-size:13px;color:var(--warm);">${error.message || 'Failed to load availability.'}</div>`;
+  }
+}
+
+async function saveMyAvailability(event) {
+  event.preventDefault();
+  const statusEl = document.getElementById('availability-form-status');
+  if (!activeCircleId || !activeUserId) {
+    statusEl.textContent = 'You must be signed in and in a circle to save availability.';
+    statusEl.style.color = 'var(--warm)';
+    return;
+  }
+
+  const fromVal = document.getElementById('availability-from').value;
+  const untilVal = document.getElementById('availability-until').value;
+  const notesVal = document.getElementById('availability-notes').value.trim();
+
+  try {
+    const response = await apiFetch(`/api/circles/${activeCircleId}/members/${activeUserId}/availability/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        available_from: new Date(fromVal).toISOString(),
+        available_until: new Date(untilVal).toISOString(),
+        notes: notesVal,
+      }),
+    });
+    if (!response.ok) {
+      const payload = await response.json();
+      const detail = payload.non_field_errors?.[0] || payload.detail || `HTTP ${response.status}`;
+      throw new Error(detail);
+    }
+    document.getElementById('availability-form').reset();
+    statusEl.textContent = 'Availability saved.';
+    statusEl.style.color = 'var(--sage)';
+    await loadMyAvailability();
+  } catch (error) {
+    statusEl.textContent = error.message || 'Failed to save availability.';
+    statusEl.style.color = 'var(--warm)';
+  }
+}
+
+async function deleteMyAvailability(availId) {
+  if (!activeCircleId || !activeUserId) return;
+  if (!confirm('Remove this availability window?')) return;
+  try {
+    const response = await apiFetch(`/api/circles/${activeCircleId}/members/${activeUserId}/availability/${availId}/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const payload = await response.json();
+      throw new Error(payload.detail || `HTTP ${response.status}`);
+    }
+    await loadMyAvailability();
+  } catch (error) {
+    alert(error.message || 'Failed to remove availability.');
   }
 }
 
@@ -1385,7 +1641,7 @@ function renderVoiceLogs(logs) {
 
 async function retryVoiceLog(logId) {
   try {
-    const resp = await fetch(`/api/voice-logs/${logId}/retry/`, {
+    const resp = await apiFetch(`/api/voice-logs/${logId}/retry/`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
     });
     if (!resp.ok) { const d = await resp.json(); alert(d.detail || 'Retry failed.'); return; }
@@ -1442,7 +1698,7 @@ async function submitVoiceLog() {
   if (label) formData.append('audio_label', label);
 
   try {
-    const resp = await fetch('/api/voice-logs/', { method: 'POST', body: formData });
+    const resp = await apiFetch('/api/voice-logs/', { method: 'POST', body: formData });
     if (!resp.ok) {
       const d = await resp.json();
       statusEl.textContent = d.detail || 'Submit failed. Try again.';
@@ -1573,10 +1829,12 @@ function toggleRecording() {
 
 openInitialPage();
 loadDashboardData();
+startLiveSync();
 document.getElementById('task-form').addEventListener('submit', saveTask);
 document.getElementById('task-due-input').addEventListener('change', () => {
   if (!editingTaskId) loadAvailableMembers();
 });
+document.getElementById('availability-form').addEventListener('submit', saveMyAvailability);
 </script>
 </body>
 </html>

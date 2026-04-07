@@ -2,8 +2,9 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate, login as auth_login
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
@@ -126,6 +127,22 @@ def get_available_members_now(circle, at_time=None):
 			role=CircleMembership.Role.MEMBER,
 			availabilities__available_from__lte=at_time,
 			availabilities__available_until__gte=at_time,
+		)
+		.select_related('user')
+		.prefetch_related('availabilities')
+		.distinct()
+	)
+
+
+def get_available_members_current_or_upcoming(circle, from_time=None):
+	"""Return member memberships that have any current or future availability window."""
+	if from_time is None:
+		from_time = timezone.now()
+	return (
+		CircleMembership.objects.filter(
+			circle=circle,
+			role=CircleMembership.Role.MEMBER,
+			availabilities__available_until__gte=from_time,
 		)
 		.select_related('user')
 		.prefetch_related('availabilities')
@@ -422,10 +439,12 @@ def build_insights_payload(circle):
 		'updated_at': now.isoformat(),
 	}
 
+@ensure_csrf_cookie
 def landing_page(request):
 	return render(request, 'core/landing.html', {'login_error': ''})
 
 
+@ensure_csrf_cookie
 def landing_login(request):
 	if request.method != 'POST':
 		return render(request, 'core/landing.html', {'login_error': ''})
@@ -450,6 +469,7 @@ def landing_login(request):
 	return render_dashboard_page(request, 'dashboard')
 
 
+@ensure_csrf_cookie
 def render_dashboard_page(request, initial_page='dashboard'):
 	return render(
 		request,
@@ -473,6 +493,7 @@ def logs_page(request):
 	return render_dashboard_page(request, 'voice')
 
 
+@ensure_csrf_cookie
 def alerts_page(request):
 	return render(
 		request,
@@ -531,6 +552,7 @@ class DashboardAPIView(APIView):
 		return Response(
 			{
 				'viewer_name': viewer_name,
+				'viewer_id': request.user.id if request.user.is_authenticated else None,
 				'user_role': role,
 				'circle': {
 					'id': circle.id,
@@ -590,6 +612,60 @@ class HealthAPIView(APIView):
 				'service': 'carecircle',
 				'debug': settings.DEBUG,
 				'timestamp': timezone.now().isoformat(),
+			}
+		)
+
+
+class LiveSyncAPIView(APIView):
+	permission_classes = [permissions.AllowAny]
+
+	def get(self, request):
+		circle, _membership_role, _actor = get_member_circle_context(request)
+
+		task_max_updated = Task.objects.filter(circle=circle).aggregate(max_updated=Max('updated_at'))['max_updated']
+		feed_max_updated = FeedEntry.objects.filter(circle=circle).aggregate(max_updated=Max('updated_at'))['max_updated']
+		voice_max_updated = VoiceLog.objects.filter(circle=circle).aggregate(max_updated=Max('updated_at'))['max_updated']
+		alert_max_updated = Alert.objects.filter(circle=circle).aggregate(max_updated=Max('updated_at'))['max_updated']
+
+		notification_max_created = Notification.objects.filter(circle=circle).aggregate(max_created=Max('created_at'))['max_created']
+		membership_max_joined = CircleMembership.objects.filter(circle=circle).aggregate(max_joined=Max('joined_at'))['max_joined']
+
+		latest_activity_candidates = [
+			value
+			for value in [
+				task_max_updated,
+				alert_max_updated,
+				notification_max_created,
+				membership_max_joined,
+				voice_max_updated,
+			]
+			if value is not None
+		]
+		latest_activity = max(latest_activity_candidates).isoformat() if latest_activity_candidates else None
+
+		return Response(
+			{
+				'tasks': {
+					'updated_at': task_max_updated.isoformat() if task_max_updated else None,
+					'count': Task.objects.filter(circle=circle).count(),
+				},
+				'feed': {
+					'updated_at': feed_max_updated.isoformat() if feed_max_updated else None,
+					'count': FeedEntry.objects.filter(circle=circle).count(),
+				},
+				'voice': {
+					'updated_at': voice_max_updated.isoformat() if voice_max_updated else None,
+					'queued': VoiceLog.objects.filter(circle=circle, status=VoiceLog.Status.QUEUED).count(),
+					'processing': VoiceLog.objects.filter(circle=circle, status=VoiceLog.Status.PROCESSING).count(),
+					'failed': VoiceLog.objects.filter(circle=circle, status=VoiceLog.Status.FAILED).count(),
+				},
+				'alerts': {
+					'updated_at': alert_max_updated.isoformat() if alert_max_updated else None,
+					'active_count': Alert.objects.filter(circle=circle, status=Alert.Status.ACTIVE).count(),
+				},
+				'activity': {
+					'updated_at': latest_activity,
+				},
 			}
 		)
 
@@ -723,24 +799,32 @@ class TaskListCreateAPIView(APIView):
 		if membership_role != CircleMembership.Role.OWNER:
 			raise PermissionDenied('Only admins can create tasks.')
 
-		# Availability gate: determine check time (task due_at or now)
+		# Availability gate: if due_at is provided, require availability at due time.
+		# If due_at is blank, allow members with current or upcoming windows.
 		from django.utils.dateparse import parse_datetime as _parse_dt
-		at_time = timezone.now()
+		at_time = None
 		due_at_raw = request.data.get('due_at')
 		if due_at_raw:
 			parsed_due = _parse_dt(str(due_at_raw))
 			if parsed_due:
 				at_time = parsed_due
 
-		available_qs = get_available_members_now(circle, at_time)
+		if at_time is not None:
+			available_qs = get_available_members_now(circle, at_time)
+			no_avail_detail = (
+				'No members are available at the selected due time. '
+				'Please adjust member availability or choose another due time.'
+			)
+		else:
+			available_qs = get_available_members_current_or_upcoming(circle)
+			no_avail_detail = (
+				'No members have any current or upcoming availability. '
+				'Please set member availability before creating a task.'
+			)
+
 		if not available_qs.exists():
 			return Response(
-				{
-					'detail': (
-						'No members are currently available. '
-						'Please set member availability before creating a task.'
-					)
-				},
+				{'detail': no_avail_detail},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
@@ -764,8 +848,13 @@ class TaskListCreateAPIView(APIView):
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 		if not available_qs.filter(user=assigned_to).exists():
+			assigned_detail = (
+				'The selected member is not available at the selected due time.'
+				if at_time is not None
+				else 'The selected member has no current or upcoming availability window.'
+			)
 			return Response(
-				{'detail': 'The selected member is not available at this time.'},
+				{'detail': assigned_detail},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
@@ -947,14 +1036,23 @@ class CircleDetailAPIView(generics.RetrieveAPIView):
 
 class CircleMemberListAPIView(generics.ListAPIView):
 	serializer_class = CircleMemberSerializer
-	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+	permission_classes = [permissions.IsAuthenticated, IsCircleMember]
 
 	def get_queryset(self):
-		return (
-			CircleMembership.objects.filter(circle_id=self.kwargs['circle_id'])
+		circle_id = self.kwargs['circle_id']
+		membership = generics.get_object_or_404(
+			CircleMembership,
+			circle_id=circle_id,
+			user=self.request.user,
+		)
+		queryset = (
+			CircleMembership.objects.filter(circle_id=circle_id)
 			.select_related('user')
 			.prefetch_related('availabilities')
 		)
+		if membership.role == CircleMembership.Role.OWNER:
+			return queryset
+		return queryset.filter(user=self.request.user)
 
 
 class CircleMemberInviteAPIView(APIView):
@@ -984,10 +1082,26 @@ class CircleMemberInviteAPIView(APIView):
 
 
 class MemberAvailabilityAPIView(APIView):
-	"""GET/POST availability windows for a specific circle member (admin only)."""
-	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+	"""GET/POST availability windows for a specific circle member.
+
+	Owners can manage any member.
+	Members can only manage their own windows.
+	"""
+	permission_classes = [permissions.IsAuthenticated, IsCircleMember]
+
+	def _assert_can_manage(self, request, circle_id, user_id):
+		request_membership = generics.get_object_or_404(
+			CircleMembership,
+			circle_id=circle_id,
+			user=request.user,
+		)
+		if request_membership.role == CircleMembership.Role.OWNER:
+			return
+		if request.user.id != user_id:
+			raise PermissionDenied('You can only manage your own availability windows.')
 
 	def get(self, request, circle_id, user_id):
+		self._assert_can_manage(request, circle_id, user_id)
 		membership = generics.get_object_or_404(
 			CircleMembership, circle_id=circle_id, user_id=user_id
 		)
@@ -995,6 +1109,7 @@ class MemberAvailabilityAPIView(APIView):
 		return Response(serializer.data)
 
 	def post(self, request, circle_id, user_id):
+		self._assert_can_manage(request, circle_id, user_id)
 		membership = generics.get_object_or_404(
 			CircleMembership, circle_id=circle_id, user_id=user_id
 		)
@@ -1005,10 +1120,26 @@ class MemberAvailabilityAPIView(APIView):
 
 
 class MemberAvailabilityDeleteAPIView(APIView):
-	"""DELETE a specific availability window (admin only)."""
-	permission_classes = [permissions.IsAuthenticated, IsCircleOwner]
+	"""DELETE a specific availability window.
+
+	Owners can delete any member's windows.
+	Members can only delete their own windows.
+	"""
+	permission_classes = [permissions.IsAuthenticated, IsCircleMember]
+
+	def _assert_can_manage(self, request, circle_id, user_id):
+		request_membership = generics.get_object_or_404(
+			CircleMembership,
+			circle_id=circle_id,
+			user=request.user,
+		)
+		if request_membership.role == CircleMembership.Role.OWNER:
+			return
+		if request.user.id != user_id:
+			raise PermissionDenied('You can only manage your own availability windows.')
 
 	def delete(self, request, circle_id, user_id, avail_id):
+		self._assert_can_manage(request, circle_id, user_id)
 		membership = generics.get_object_or_404(
 			CircleMembership, circle_id=circle_id, user_id=user_id
 		)
@@ -1026,13 +1157,16 @@ class AvailableMembersAPIView(APIView):
 	def get(self, request, circle_id):
 		circle = generics.get_object_or_404(Circle, pk=circle_id)
 		from django.utils.dateparse import parse_datetime as _parse_dt
-		at_time = timezone.now()
+		at_time = None
 		at_str = request.query_params.get('at')
 		if at_str:
 			parsed = _parse_dt(at_str)
 			if parsed:
 				at_time = parsed
-		memberships = get_available_members_now(circle, at_time)
+		if at_time is None:
+			memberships = get_available_members_current_or_upcoming(circle)
+		else:
+			memberships = get_available_members_now(circle, at_time)
 		return Response(CircleMemberSerializer(memberships, many=True).data)
 
 
@@ -1094,8 +1228,21 @@ class CircleNotificationSendAPIView(APIView):
 		return Response({'count': len(notifications)}, status=status.HTTP_201_CREATED)
 
 
+@ensure_csrf_cookie
 def members_management_page(request, circle_id):
-	return render(request, 'core/members_management.html', {'circle_id': circle_id})
+	can_manage_members = False
+	if request.user.is_authenticated:
+		membership = CircleMembership.objects.filter(circle_id=circle_id, user=request.user).first()
+		if membership is not None:
+			can_manage_members = membership.role == CircleMembership.Role.OWNER
+	return render(
+		request,
+		'core/members_management.html',
+		{
+			'circle_id': circle_id,
+			'can_manage_members': can_manage_members,
+		},
+	)
 
 def profile_page(request):
 	return render(request, 'core/profile.html', {'user_role': get_demo_user_role_label(request)})

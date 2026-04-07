@@ -237,7 +237,29 @@ body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: va
 
 <script>
 const circleId = {{ circle_id }};
+const canManageMembers = {{ can_manage_members|yesno:'true,false' }};
 let membersData = [];
+
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${name}=`));
+  return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : null;
+}
+
+function apiFetch(url, options = {}) {
+  const opts = { credentials: 'same-origin', ...options };
+  const method = (opts.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+    const csrfToken = getCookie('csrftoken');
+    opts.headers = { ...(opts.headers || {}) };
+    if (csrfToken) {
+      opts.headers['X-CSRFToken'] = csrfToken;
+    }
+  }
+  return fetch(url, opts);
+}
 
 function switchTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -258,7 +280,7 @@ function showMessage(text, type = 'success') {
 
 async function loadMembers() {
   try {
-    const response = await fetch(`/api/circles/${circleId}/members/`);
+    const response = await apiFetch(`/api/circles/${circleId}/members/`);
     if (!response.ok) {
       if (response.status === 403) {
         document.getElementById('members-list').innerHTML = '<p>You need owner permissions to view members.</p>';
@@ -292,7 +314,7 @@ function renderMembersList() {
         <td><span class="member-role ${roleClass}">${member.role}</span></td>
         <td>${joinedDate}</td>
         <td>
-          ${member.role === 'member' ? `<button type="button" class="btn btn-danger" onclick="removeMember(${member.user_id})">Remove</button>` : '<span style="color: var(--muted);">—</span>'}
+          ${(canManageMembers && member.role === 'member') ? `<button type="button" class="btn btn-danger" onclick="removeMember(${member.user_id})">Remove</button>` : '<span style="color: var(--muted);">—</span>'}
         </td>
       </tr>
     `;
@@ -302,9 +324,10 @@ function renderMembersList() {
 }
 
 async function removeMember(userId) {
+  if (!canManageMembers) return;
   if (!confirm('Remove this member from the circle?')) return;
   try {
-    const response = await fetch(`/api/circles/${circleId}/members/${userId}/`, { method: 'DELETE' });
+    const response = await apiFetch(`/api/circles/${circleId}/members/${userId}/`, { method: 'DELETE' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     showMessage('Member removed successfully.', 'success');
     loadMembers();
@@ -316,9 +339,10 @@ async function removeMember(userId) {
 
 async function handleInvite(event) {
   event.preventDefault();
+  if (!canManageMembers) return;
   const email = document.getElementById('invite-email').value;
   try {
-    const response = await fetch(`/api/circles/${circleId}/members/invite/`, {
+    const response = await apiFetch(`/api/circles/${circleId}/members/invite/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, role: 'member' })
@@ -351,6 +375,7 @@ async function loadNotifyCheckboxes() {
 
 async function handleNotify(event) {
   event.preventDefault();
+  if (!canManageMembers) return;
   const checked = document.querySelectorAll('#members-checkboxes input:checked');
   if (checked.length === 0) {
     showMessage('Select at least one recipient.', 'error');
@@ -361,7 +386,7 @@ async function handleNotify(event) {
   const message = document.getElementById('notify-message').value;
 
   try {
-    const response = await fetch(`/api/circles/${circleId}/notifications/`, {
+    const response = await apiFetch(`/api/circles/${circleId}/notifications/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipient_ids: recipientIds, title, message })
@@ -413,7 +438,7 @@ async function loadAvailability() {
       <div class="avail-card">
         <div class="avail-card-header">
           <div class="avail-member-name">${member.full_name}</div>
-          <button type="button" class="btn btn-secondary" onclick="openAvailModal(${member.user_id}, '${member.full_name}')">+ Add Window</button>
+          <button type="button" class="btn btn-secondary" onclick="openAvailModal(${member.user_id}, '${member.full_name.replace(/'/g, "\\'")}')">+ Add Window</button>
         </div>
         <div class="avail-windows">${windowsHtml}</div>
       </div>`;
@@ -440,7 +465,7 @@ async function handleAddAvailability(event) {
   const untilVal = document.getElementById('avail-until').value;
   const notes = document.getElementById('avail-notes').value;
   try {
-    const response = await fetch(`/api/circles/${circleId}/members/${userId}/availability/`, {
+    const response = await apiFetch(`/api/circles/${circleId}/members/${userId}/availability/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -468,7 +493,7 @@ async function handleAddAvailability(event) {
 async function deleteAvailability(userId, availId) {
   if (!confirm('Remove this availability window?')) return;
   try {
-    const response = await fetch(`/api/circles/${circleId}/members/${userId}/availability/${availId}/`, {
+    const response = await apiFetch(`/api/circles/${circleId}/members/${userId}/availability/${availId}/`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -480,6 +505,19 @@ async function deleteAvailability(userId, availId) {
     showMessage('Failed to remove availability window.', 'error');
   }
 }
+
+function applyRoleBasedUi() {
+  if (canManageMembers) return;
+  const tabButtons = Array.from(document.querySelectorAll('.tabs .tab'));
+  if (tabButtons[1]) tabButtons[1].style.display = 'none';
+  if (tabButtons[2]) tabButtons[2].style.display = 'none';
+  const inviteTab = document.getElementById('tab-invite');
+  const notifyTab = document.getElementById('tab-notify');
+  if (inviteTab) inviteTab.style.display = 'none';
+  if (notifyTab) notifyTab.style.display = 'none';
+}
+
+applyRoleBasedUi();
 </script>
 
 </body>

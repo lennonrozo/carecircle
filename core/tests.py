@@ -62,12 +62,14 @@ class CircleRBACAPITests(TestCase):
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
 		self.assertEqual(len(response.data), 2)
 
-	def test_member_cannot_list_all_members(self):
+	def test_member_lists_only_self_membership(self):
 		self.client.force_authenticate(user=self.member)
 
 		response = self.client.get(f'/api/circles/{self.circle.id}/members/')
 
-		self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(len(response.data), 1)
+		self.assertEqual(response.data[0]['user_id'], self.member.id)
 
 	def test_owner_can_invite_member(self):
 		self.client.force_authenticate(user=self.owner)
@@ -233,7 +235,9 @@ class CircleRBACAPITests(TestCase):
 		self.assertEqual(member_task_create_response.status_code, status.HTTP_403_FORBIDDEN)
 
 		member_members_response = self.client.get(f'/api/circles/{self.circle.id}/members/')
-		self.assertEqual(member_members_response.status_code, status.HTTP_403_FORBIDDEN)
+		self.assertEqual(member_members_response.status_code, status.HTTP_200_OK)
+		self.assertEqual(len(member_members_response.data), 1)
+		self.assertEqual(member_members_response.data[0]['user_id'], self.member.id)
 
 		member_feed_post_response = self.client.post(
 			'/api/feed/',
@@ -371,7 +375,7 @@ class AdminTaskVoiceFlowTests(TestCase):
 			format='json',
 		)
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-		self.assertIn('No members are currently available', response.data['detail'])
+		self.assertIn('No members have any current or upcoming availability', response.data['detail'])
 
 	def test_admin_can_create_task_for_past_due_when_past_availability_matches(self):
 		self.assertTrue(self.client.login(username=self.owner.username, password='ownerpass123'))
