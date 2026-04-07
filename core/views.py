@@ -744,10 +744,17 @@ class FeedEntryListCreateAPIView(APIView):
 			.select_related('created_by')
 			.order_by('-created_at')[:50]
 		)
+		active_tasks = (
+			Task.objects.filter(circle=circle, status__in=[Task.Status.OPEN, Task.Status.CLAIMED])
+			.select_related('claimed_by', 'verified_by', 'created_by', 'assigned_to')
+			.order_by('due_at', '-updated_at')
+		)
 		serializer = FeedEntrySerializer(entries, many=True)
+		active_tasks_serializer = TaskSerializer(active_tasks, many=True)
 		return Response(
 			{
 				'entries': serializer.data,
+				'active_tasks': active_tasks_serializer.data,
 				'user_role': 'admin' if membership_role == CircleMembership.Role.OWNER else 'member',
 				'can_post': True,
 			}
