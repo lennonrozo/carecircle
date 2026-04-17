@@ -295,6 +295,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/></svg>
         </a>
       <div class="role-badge" id="dashboard-role-badge">{{ user_role }}</div>
+      <div id="live-dot" title="Live sync active" style="width:8px;height:8px;border-radius:50%;background:rgba(168,203,184,0.5);transition:background 0.3s;"></div>
     </div>
   </nav>
 
@@ -909,7 +910,7 @@ function renderTasksBoard(payload) {
   tasksCanManage = !!payload.can_manage;
   document.getElementById('new-task-button').style.display = tasksCanManage ? 'flex' : 'none';
 
-  const openTasks = tasks.filter(task => task.status === 'open' && task.assigned_to_id === activeUserId);
+  const openTasks = tasks.filter(task => task.status === 'open');
   const claimedTasks = tasks.filter(task => task.status === 'claimed');
   const fulfilledTasks = tasks.filter(task => task.status === 'verified');
 
@@ -1262,18 +1263,21 @@ async function pollLiveSync() {
     if (tasksChanged) {
       tasksLoaded = false;
       feedLoaded = false;
-      if (isPageActive('tasks')) loadTasksData(true);
+      loadTasksData(true);
       if (isPageActive('feed')) loadFeedData(true);
+      flashLiveIndicator();
     }
 
     if (feedChanged) {
       feedLoaded = false;
       if (isPageActive('feed')) loadFeedData(true);
+      flashLiveIndicator();
     }
 
     if (voiceChanged) {
       voiceLoaded = false;
-      if (isPageActive('voice')) loadVoiceData(true);
+      loadVoiceData(true);
+      flashLiveIndicator();
     }
 
     if (tasksChanged || voiceChanged || alertsChanged || activityChanged) {
@@ -1293,10 +1297,21 @@ async function pollLiveSync() {
   }
 }
 
+function flashLiveIndicator() {
+  const dot = document.getElementById('live-dot');
+  if (!dot) return;
+  dot.style.opacity = '1';
+  dot.style.background = '#A8CBB8';
+  clearTimeout(flashLiveIndicator._timer);
+  flashLiveIndicator._timer = setTimeout(() => {
+    dot.style.background = 'rgba(168,203,184,0.5)';
+  }, 600);
+}
+
 function startLiveSync() {
   if (liveSyncTimer) return;
   pollLiveSync();
-  liveSyncTimer = setInterval(pollLiveSync, 2500);
+  liveSyncTimer = setInterval(pollLiveSync, 1000);
 }
 
 function openTaskModal(taskId = null) {
